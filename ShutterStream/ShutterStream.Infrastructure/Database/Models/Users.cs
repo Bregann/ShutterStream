@@ -15,7 +15,7 @@ namespace ShutterStream.Infrastructure.Database.Models
         public required string Email { get; set; }
         public required bool CanUploadFiles { get; set; }
         public required DateTime LastActivity { get; set; }
-        public required List<Sessions> Sessions { get; set; }
-        public required List<Albums> Albums { get; set; }
+        public List<Sessions> Sessions { get; set; }
+        public List<Albums> Albums { get; set; }
     }
 }

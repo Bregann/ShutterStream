@@ -7,16 +7,16 @@ EXPOSE 443
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
-COPY ["ShutterStream/ShutterStream.csproj", "ShutterStream/"]
-RUN dotnet restore "ShutterStream/ShutterStream.csproj"
+COPY ["ShutterStream/ShutterStream.Api.csproj", "ShutterStream/"]
+RUN dotnet restore "ShutterStream/ShutterStream.Api.csproj"
 COPY . .
 WORKDIR "/src/ShutterStream"
-RUN dotnet build "ShutterStream.csproj" -c Release -o /app/build
+RUN dotnet build "ShutterStream.Api.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "ShutterStream.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "ShutterStream.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "ShutterStream.dll"]
+ENTRYPOINT ["dotnet", "ShutterStream.Api.dll"]
