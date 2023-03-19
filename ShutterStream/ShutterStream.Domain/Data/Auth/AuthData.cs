@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static ShutterStream.Domain.Dtos.AuthDto;
 
-namespace ShutterStream.Domain.Data
+namespace ShutterStream.Domain.Data.Auth
 {
     public class AuthData
     {
@@ -75,7 +75,7 @@ namespace ShutterStream.Domain.Data
                 };
             }
 
-            using(var context = new DatabaseContext())
+            using (var context = new DatabaseContext())
             {
                 if (context.Users.Any(x => x.Username == username))
                 {
@@ -111,9 +111,9 @@ namespace ShutterStream.Domain.Data
 
                 Log.Information($"[Registration] New user registered - {username}");
 
-                return new RegisterUserDto 
-                { 
-                    Success = true 
+                return new RegisterUserDto
+                {
+                    Success = true
                 };
             }
         }

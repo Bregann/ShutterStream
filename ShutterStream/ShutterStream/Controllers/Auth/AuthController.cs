@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ShutterStream.Domain.Data;
 using ShutterStream.Api.Dtos;
 using static ShutterStream.Domain.Dtos.AuthDto;
+using ShutterStream.Domain.Data.Auth;
 
 namespace ShutterStream.Api.Controllers.Auth
 {
