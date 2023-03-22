@@ -5,6 +5,7 @@ import Head from 'next/head';
 import { ButtonStylesParams, MantineProvider } from '@mantine/core';
 import { ToastContainer } from 'react-toastify';
 import Navigation from '@/components/nav/Navigation';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function App(props: AppProps) {
   if (process.env.NODE_ENV === 'development') {

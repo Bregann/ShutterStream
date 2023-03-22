@@ -30,6 +30,26 @@ export const DoBackendPost = async (apiUrl: string, data: any, sessionId?: strin
     }
 }
 
+export const DoBackendImagePost = async (apiUrl: string, data: any, sessionId?: string) => {
+    if(sessionId){
+        return await fetch(process.env.API_URL + apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                'Authorization': sessionId
+            },
+            body: data
+        });
+    }
+    else{
+        return await fetch(process.env.API_URL + apiUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'multipart/form-data'},
+            body: data
+        });
+    }
+}
+
 export const DoBackendDelete = async(apiUrl: string, data: any, sessionId?: string) => {
     if(sessionId){
         return await fetch(process.env.API_URL + apiUrl, {

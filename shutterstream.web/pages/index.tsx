@@ -25,7 +25,8 @@ export default function Home() {
           </div>
         </Carousel.Slide>
         <Carousel.Slide><Image src="/DSC_0078.jpg" width={200} height={200} alt="aaa"></Image></Carousel.Slide>
-        <Carousel.Slide>          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+        <Carousel.Slide>
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
           <Image src="/DSC_0078.jpg" fill alt="aaa" />
         </div></Carousel.Slide>
         <Carousel.Slide>4</Carousel.Slide>

@@ -30,6 +30,25 @@ export const DoPost = async (apiPath: string, data: any, sessionId?: string) => 
     }
 }
 
+export const DoFormDataPost = async (apiPath: string, data: any, sessionId?: string) => {
+    if(sessionId){
+        return await fetch(process.env.NEXT_PUBLIC_API_URL + apiPath, {
+            method: 'POST',
+            headers: {
+                'Authorization': sessionId
+            },
+            body: data
+        });
+    }
+    else{
+        console.log(process.env.NEXT_PUBLIC_API_URL);
+        return await fetch(process.env.NEXT_PUBLIC_API_URL + apiPath, {
+            method: 'POST',
+            body: data
+        });
+    }
+}
+
 export const DoDelete = async(apiPath: string, data: any, sessionId?: string) => {
     if(sessionId){
         return await fetch(process.env.NEXT_PUBLIC_WEB_URL + apiPath, {
