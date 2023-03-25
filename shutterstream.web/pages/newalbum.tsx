@@ -6,7 +6,6 @@ import { Dropzone, DropzoneProps, IMAGE_MIME_TYPE, FileWithPath } from '@mantine
 import { IconUpload, IconX, IconPhoto } from '@tabler/icons-react';
 import { useSession } from 'next-auth/react';
 import { useRef, useState } from 'react';
-import { toast } from 'react-toastify';
 
 const NewAlbum = () => {
     const theme = useMantineTheme();
@@ -16,7 +15,7 @@ const NewAlbum = () => {
     const [uploadInProgress, setUploadInProgress] = useState(false);
     const albumNameRef = useRef<HTMLInputElement>(null);
     const locationNameRef = useRef<HTMLInputElement>(null);
-    const { data: session } = useSession()
+    const { data: session } = useSession();
 
     const SetFilesToUpload = (files: FileWithPath[]) => {
         setFilesUploaded(files);
