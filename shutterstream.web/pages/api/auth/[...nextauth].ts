@@ -40,6 +40,7 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user}) {
+      await DoBackendPost('/api/Auth/UpdateSessionExpireTime', token.exp, token.sessionId);
 
       if(user){
         token.sessionId = user?.sessionId;

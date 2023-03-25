@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using ShutterStream.Api.Dtos;
 using static ShutterStream.Domain.Dtos.AuthDto;
 using ShutterStream.Domain.Data.Auth;
+using ShutterStream.Api.Dtos.Auth;
 
 namespace ShutterStream.Api.Controllers.Auth
 {
@@ -26,6 +26,24 @@ namespace ShutterStream.Api.Controllers.Auth
         public RegisterUserDto RegisterNewUserAsync([FromBody] RegisterNewUserRequestDto dto)
         {
             return AuthData.RegisterNewUser(dto.Username.ToLower(), dto.Password, dto.Email.ToLower());
+        }
+
+        [HttpPost("UpdateSessionExpireTime")]
+        public ActionResult UpdateSessionExpireTime([FromBody] long exp)
+        {
+            if (Request.Headers["Authorization"].Count == 0)
+            {
+                return BadRequest();
+            }
+
+            var success = AuthData.UpdateSessionExpireTime(Request.Headers["Authorization"]!, exp);
+
+            if (!success)
+            {
+                return BadRequest();
+            }
+
+            return Ok();
         }
 
         [HttpDelete("DeleteUserSession")]

@@ -1,4 +1,4 @@
-﻿namespace ShutterStream.Api.Dtos
+﻿namespace ShutterStream.Api.Dtos.Auth
 {
     public class RegisterNewUserRequestDto
     {

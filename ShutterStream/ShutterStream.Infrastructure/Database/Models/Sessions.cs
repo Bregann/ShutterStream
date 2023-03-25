@@ -15,5 +15,6 @@ namespace ShutterStream.Infrastructure.Database.Models
 
         public required Users User { get; set; }
         public required string SessionId { get; set; }
+        public required DateTime Expires { get; set; }
     }
 }

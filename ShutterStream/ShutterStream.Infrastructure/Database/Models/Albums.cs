@@ -13,10 +13,11 @@ namespace ShutterStream.Infrastructure.Database.Models
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         public required string AlbumName { get; set; }
+        public required string? Location { get; set; }
         public required long Likes { get; set; }
         public required long Views { get; set; }
         public required DateTime CreatedDate { get; set; }
         public required Users User { get; set; }
-        public required List<Images> Images { get; set; }
+        public List<Images> Images { get; set; }
     }
 }

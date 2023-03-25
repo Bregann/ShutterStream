@@ -1,11 +1,13 @@
 import { Carousel } from '@mantine/carousel';
 import { Box, Text } from '@mantine/core';
 import Autoplay from 'embla-carousel-autoplay';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import { useRef } from 'react';
 
 export default function Home() {
   const autoplay = useRef(Autoplay({ delay: 4000 }));
+
 
   return (
     <>

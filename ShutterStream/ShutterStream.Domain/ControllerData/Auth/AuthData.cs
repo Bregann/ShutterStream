@@ -50,7 +50,8 @@ namespace ShutterStream.Domain.Data.Auth
                 context.Sessions.Add(new Sessions
                 {
                     SessionId = sessionId,
-                    User = user
+                    User = user,
+                    Expires = DateTime.UtcNow.AddMonths(1),
                 });
 
                 context.SaveChanges();
@@ -64,6 +65,7 @@ namespace ShutterStream.Domain.Data.Auth
                 };
             }
         }
+
         public static RegisterUserDto RegisterNewUser(string username, string password, string email)
         {
             if (!GeneralDataHelper.IsValidEmailAddress(email))
@@ -104,7 +106,11 @@ namespace ShutterStream.Domain.Data.Auth
                     HashedPassword = hashedPassword,
                     LastActivity = DateTime.UtcNow,
                     CanUploadFiles = false,
-                    Email = email
+                    KeepFullSizeImages = false,
+                    Email = email,
+                    ImageUploadDailyLimit = 1000,
+                    ImageUploadsLeftForDay = 1000,
+                    UploadImageSizeLimit = 6
                 });
 
                 context.SaveChanges();
@@ -117,6 +123,7 @@ namespace ShutterStream.Domain.Data.Auth
                 };
             }
         }
+
         public static void DeleteUserSession(string sessionId)
         {
             using (var context = new DatabaseContext())
@@ -125,6 +132,24 @@ namespace ShutterStream.Domain.Data.Auth
                 context.SaveChanges();
 
                 Log.Information($"[Logout User] Session {sessionId} deleted");
+            }
+        }
+
+        public static bool UpdateSessionExpireTime(string sessionId, long epochTime)
+        {
+            using (var context = new DatabaseContext())
+            {
+                var session = context.Sessions.FirstOrDefault(x => x.SessionId == sessionId);
+
+                if (session == null)
+                {
+                    return false;
+                }
+
+                session.Expires = DateTimeOffset.FromUnixTimeSeconds(epochTime).DateTime;
+
+                context.SaveChanges();
+                return true;
             }
         }
     }
