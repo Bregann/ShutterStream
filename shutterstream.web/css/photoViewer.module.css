@@ -1,0 +1,49 @@
+/* photoViewer.module.css */
+
+.stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  border-radius: var(--mantine-radius-md);
+  background-color: #000;
+  overflow: hidden;
+}
+
+.image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.navButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.stage:hover .navButton,
+.navButton:focus-visible {
+  opacity: 1;
+}
+
+/* Touch screens have no hover, so always show the buttons */
+@media (hover: none) {
+  .navButton {
+    opacity: 0.8;
+  }
+}
+
+.previous {
+  left: var(--mantine-spacing-md);
+}
+
+.next {
+  right: var(--mantine-spacing-md);
+}

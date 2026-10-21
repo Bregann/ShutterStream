@@ -1,35 +1,39 @@
 {
-  "name": "shutterstream.web",
+  "name": "shutterstream",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint --fix . --ext .js,.jsx,.ts,.tsx"
+  },
+  "engines": {
+    "node": ">=26"
   },
   "dependencies": {
-    "@emotion/react": "^11.10.6",
-    "@emotion/server": "^11.10.0",
-    "@mantine/carousel": "^6.0.2",
-    "@mantine/core": "^6.0.2",
-    "@mantine/dropzone": "^6.0.4",
-    "@mantine/form": "^6.0.2",
-    "@mantine/hooks": "^6.0.2",
-    "@mantine/next": "^6.0.2",
-    "@tabler/icons-react": "^2.11.0",
-    "@types/node": "18.15.3",
-    "@types/react": "18.0.28",
-    "@types/react-dom": "18.0.11",
-    "embla-carousel-autoplay": "^7.1.0",
-    "embla-carousel-react": "^7.1.0",
-    "eslint": "8.36.0",
-    "eslint-config-next": "13.2.4",
-    "next": "13.2.4",
-    "next-auth": "^4.20.1",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-toastify": "^9.1.1",
-    "typescript": "5.0.2"
+    "@mantine/core": "^9.7.3",
+    "@mantine/hooks": "^9.7.3",
+    "@mantine/notifications": "^9.7.3",
+    "@tabler/icons-react": "^3.49.0",
+    "@tanstack/react-query": "^5.104.5",
+    "next": "16.4.2",
+    "nextjs-toploader": "^3.9.17",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.0",
+    "eslint": "^10.13.0",
+    "postcss": "^8.5.31",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
+    "typescript": "^6.0.3"
   }
 }

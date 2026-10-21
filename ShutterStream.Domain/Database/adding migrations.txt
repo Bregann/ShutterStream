@@ -1,0 +1,8 @@
+Add migrations with:
+Add-Migration <name> -o Database/Migrations
+
+Update database with:
+Update-Database -Context AppDbContext
+
+Or from the CLI (run from the repo root):
+dotnet ef migrations add <name> --project ShutterStream.Domain --startup-project ShutterStream.Domain -o Database/Migrations

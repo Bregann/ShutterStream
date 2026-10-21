@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.1.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.3.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.13" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="Moq" Version="4.21.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="NUnit" Version="5.0.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.15.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.1" />
+    <PackageReference Include="Testcontainers" Version="4.16.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ShutterStream.Domain\ShutterStream.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

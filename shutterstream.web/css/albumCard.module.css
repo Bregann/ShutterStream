@@ -1,0 +1,35 @@
+/* albumCard.module.css */
+
+.card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-md);
+  background-color: var(--mantine-color-dark-6);
+  text-decoration: none;
+  color: var(--mantine-color-white);
+}
+
+.image {
+  transition: transform 0.4s ease;
+}
+
+.card:hover .image {
+  transform: scale(1.04);
+}
+
+/* Gradient keeps the title readable over bright photos */
+.overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: var(--mantine-spacing-md);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--mantine-color-dark-2);
+}

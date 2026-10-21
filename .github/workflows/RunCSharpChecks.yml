@@ -1,0 +1,42 @@
+name: Run C# formatting
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "ShutterStream.Domain/**"
+      - "ShutterStream.Core/**"
+      - "ShutterStream.Tests/**"
+      - "ShutterStream.sln"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "ShutterStream.Domain/**"
+      - "ShutterStream.Core/**"
+      - "ShutterStream.Tests/**"
+      - "ShutterStream.sln"
+
+jobs:
+  format-csharp-code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ShutterStream.sln
+
+      - name: Check C# formatting
+        run: dotnet format --verify-no-changes
+
+      - name: Run tests
+        run: dotnet test ShutterStream.Tests/ShutterStream.Tests.csproj --verbosity normal

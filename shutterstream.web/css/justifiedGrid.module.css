@@ -1,0 +1,51 @@
+/* justifiedGrid.module.css */
+
+/*
+ * Flickr style justified rows done purely in CSS, so it renders correctly on the server with no
+ * layout shift. Each item's width is its aspect ratio times the target row height, and it grows in
+ * proportion to its aspect ratio, so every photo in a row ends up the same height.
+ */
+.grid {
+  --row-height: 280px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Soaks up the spare space on the last row so its photos keep the target height instead of stretching */
+.grid::after {
+  content: '';
+  flex-grow: 999999999;
+}
+
+@media (max-width: $mantine-breakpoint-sm) {
+  .grid {
+    --row-height: 160px;
+  }
+}
+
+.item {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: calc(var(--row-height) * var(--aspect-ratio));
+  background-color: var(--mantine-color-dark-6);
+}
+
+/* Reserves the space for the photo at the right aspect ratio before it loads */
+.spacer {
+  display: block;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.2s ease;
+}
+
+.item:hover .image {
+  filter: brightness(1.1);
+}

@@ -364,3 +364,7 @@ FodyWeavers.xsd
 retrotrack.web/.env.production
 *.production
 RetroTrack.Infrastructure/DbSettings.cs
+
+# ShutterStream debug photo library and thumbnail cache
+ShutterStream.Core/DevPhotoLibrary/
+ShutterStream.Core/DevPhotoCache/

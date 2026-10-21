@@ -1,0 +1,25 @@
+/* adminPhotoGrid.module.css */
+
+.tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--mantine-radius-sm);
+  background-color: var(--mantine-color-dark-6);
+}
+
+.hidden .image {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.badges {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+
+.actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
