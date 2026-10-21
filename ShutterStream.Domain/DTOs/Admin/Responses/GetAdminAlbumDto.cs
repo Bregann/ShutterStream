@@ -39,6 +39,7 @@ namespace ShutterStream.Domain.DTOs.Admin.Responses
         public required int Height { get; set; }
         public required long Version { get; set; }
         public required bool IsHidden { get; set; }
+        public required int ViewCount { get; set; }
         public string? Title { get; set; }
         public string? Description { get; set; }
 

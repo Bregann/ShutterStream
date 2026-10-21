@@ -1,19 +1,20 @@
 using ShutterStream.Domain.DTOs.Admin.Requests;
 using ShutterStream.Domain.DTOs.Admin.Responses;
+using ShutterStream.Domain.Results;
 
 namespace ShutterStream.Domain.Interfaces.Api.Admin
 {
     public interface IAdminService
     {
         Task<GetLibraryStatusDto> GetLibraryStatus();
-        void QueueLibraryScan();
+        Result QueueLibraryScan();
         Task<GetAdminAlbumsDto> GetAdminAlbums();
-        Task<GetAdminAlbumDto> GetAdminAlbum(int albumId);
-        Task UpdateAlbumDetails(UpdateAlbumDetailsRequest request);
-        Task SetAlbumVisibility(SetAlbumVisibilityRequest request);
-        Task SetAlbumCover(SetAlbumCoverRequest request);
-        Task SetPhotoVisibility(SetPhotoVisibilityRequest request);
-        Task QueueAlbumCaptions(GenerateAlbumCaptionsRequest request);
-        Task UpdatePhotoCaption(UpdatePhotoCaptionRequest request);
+        Task<Result<GetAdminAlbumDto>> GetAdminAlbum(int albumId);
+        Task<Result> UpdateAlbumDetails(UpdateAlbumDetailsRequest request);
+        Task<Result> SetAlbumVisibility(SetAlbumVisibilityRequest request);
+        Task<Result> SetAlbumCover(SetAlbumCoverRequest request);
+        Task<Result> SetPhotoVisibility(SetPhotoVisibilityRequest request);
+        Task<Result> QueueAlbumCaptions(GenerateAlbumCaptionsRequest request);
+        Task<Result> UpdatePhotoCaption(UpdatePhotoCaptionRequest request);
     }
 }

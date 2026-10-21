@@ -52,9 +52,10 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddHttpContextAccessor();
 
-// The photo library is mounted read only, generated thumbnails go in the cache folder
-var photoLibraryPath = Environment.GetEnvironmentVariable("PhotoLibraryPath") ?? "/photos";
-var photoCachePath = Environment.GetEnvironmentVariable("PhotoCachePath") ?? "/app/PhotoCache";
+// The photo library is mounted read only, generated thumbnails go in the cache folder.
+// Made absolute because PhysicalFile refuses relative paths, which the dev launch profile uses
+var photoLibraryPath = Path.GetFullPath(Environment.GetEnvironmentVariable("PhotoLibraryPath") ?? "/photos");
+var photoCachePath = Path.GetFullPath(Environment.GetEnvironmentVariable("PhotoCachePath") ?? "/app/PhotoCache");
 
 // Add in our own services
 builder.Services.AddSingleton<IEnvironmentalSettingHelper, EnvironmentalSettingHelper>();
@@ -67,8 +68,8 @@ builder.Services.AddHttpClient<IAiCaptionHelper, GeminiCaptionHelper>();
 // Add in the auth
 builder.Services.AddAuthorization();
 
-// add in controller data services
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+// Expected failures come back from the services as Results, so only unhandled exceptions reach
+// the exception handler. ProblemDetails turns those into a generic 500 with no internals exposed
 builder.Services.AddProblemDetails();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -196,12 +197,11 @@ using (var scope = app.Services.CreateScope())
 // The debug database is recreated on every start, so scan straight away to populate it
 BackgroundJob.Enqueue<ILibraryScanService>(service => service.ScanLibrary());
 #else
-// Apply any pending migrations and create the admin login on first start
+// Apply any pending migrations. The admin login and environmental settings are created by hand
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
-    await DatabaseBootstrapHelper.BootstrapDatabase(dbContext);
 }
 #endif
 

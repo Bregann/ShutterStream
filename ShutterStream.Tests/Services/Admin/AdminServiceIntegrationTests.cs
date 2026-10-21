@@ -4,7 +4,7 @@ using Hangfire.States;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using ShutterStream.Domain.DTOs.Admin.Requests;
-using ShutterStream.Domain.Exceptions;
+using ShutterStream.Domain.Results;
 using ShutterStream.Domain.Helpers;
 using ShutterStream.Domain.Interfaces.Api.Captions;
 using ShutterStream.Domain.Interfaces.Api.Library;
@@ -69,22 +69,24 @@ namespace ShutterStream.Tests.Services.Admin
         public void QueueLibraryScan_ShouldEnqueueScanJob()
         {
             // Act
-            _adminService.QueueLibraryScan();
+            var result = _adminService.QueueLibraryScan();
 
             // Assert
+            Assert.That(result.Success, Is.True);
             _mockBackgroundJobClient.Verify(x => x.Create(
                 It.Is<Job>(job => job.Type == typeof(ILibraryScanService) && job.Method.Name == nameof(ILibraryScanService.ScanLibrary)),
                 It.IsAny<EnqueuedState>()), Times.Once);
         }
 
         [Test]
-        public void QueueLibraryScan_WhenScanAlreadyRunning_ShouldThrowConflictException()
+        public void QueueLibraryScan_WhenScanAlreadyRunning_ShouldReturnConflict()
         {
             // Arrange
             _scanStatusHelper.TryStartScan();
 
             // Act & Assert
-            Assert.Throws<ConflictException>(() => _adminService.QueueLibraryScan());
+            var result = _adminService.QueueLibraryScan();
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.Conflict));
             _mockBackgroundJobClient.Verify(x => x.Create(It.IsAny<Job>(), It.IsAny<IState>()), Times.Never);
         }
 
@@ -109,7 +111,7 @@ namespace ShutterStream.Tests.Services.Admin
             var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
 
             // Act
-            var result = await _adminService.GetAdminAlbum(album.Id);
+            var result = (await _adminService.GetAdminAlbum(album.Id)).Value;
 
             // Assert
             Assert.That(result.Photos, Has.Length.EqualTo(3));
@@ -123,7 +125,7 @@ namespace ShutterStream.Tests.Services.Admin
             var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
 
             // Act
-            await _adminService.UpdateAlbumDetails(new UpdateAlbumDetailsRequest
+            var result = await _adminService.UpdateAlbumDetails(new UpdateAlbumDetailsRequest
             {
                 AlbumId = album.Id,
                 Title = "  Iceland 2025 ",
@@ -131,6 +133,7 @@ namespace ShutterStream.Tests.Services.Admin
             });
 
             // Assert
+            Assert.That(result.Success, Is.True);
             var updated = await DbContext.Albums.AsNoTracking().FirstAsync(a => a.Id == album.Id);
             Assert.That(updated.Title, Is.EqualTo("Iceland 2025"));
             Assert.That(updated.Description, Is.EqualTo("Northern lights trip"));
@@ -138,18 +141,19 @@ namespace ShutterStream.Tests.Services.Admin
         }
 
         [Test]
-        public async Task UpdateAlbumDetails_WithEmptyTitle_ShouldThrowBadRequestException()
+        public async Task UpdateAlbumDetails_WithEmptyTitle_ShouldReturnBadRequest()
         {
             // Arrange
             var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
 
             // Act & Assert
-            await Assert.ThrowsAsync<BadRequestException>(async () => await _adminService.UpdateAlbumDetails(new UpdateAlbumDetailsRequest
+            var result = await _adminService.UpdateAlbumDetails(new UpdateAlbumDetailsRequest
             {
                 AlbumId = album.Id,
                 Title = "   ",
                 Description = ""
-            }));
+            });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.BadRequest));
         }
 
         [Test]
@@ -159,19 +163,20 @@ namespace ShutterStream.Tests.Services.Admin
             var album = DbContext.Albums.First(a => a.FolderName == "Private Album");
 
             // Act
-            await _adminService.SetAlbumVisibility(new SetAlbumVisibilityRequest { AlbumId = album.Id, IsPublic = true });
+            var result = await _adminService.SetAlbumVisibility(new SetAlbumVisibilityRequest { AlbumId = album.Id, IsPublic = true });
 
             // Assert
+            Assert.That(result.Success, Is.True);
             var updated = await DbContext.Albums.AsNoTracking().FirstAsync(a => a.Id == album.Id);
             Assert.That(updated.IsPublic, Is.True);
         }
 
         [Test]
-        public async Task SetAlbumVisibility_WhenAlbumNotFound_ShouldThrowNotFoundException()
+        public async Task SetAlbumVisibility_WhenAlbumNotFound_ShouldReturnNotFound()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await _adminService.SetAlbumVisibility(new SetAlbumVisibilityRequest { AlbumId = 99999, IsPublic = true }));
+            var result = await _adminService.SetAlbumVisibility(new SetAlbumVisibilityRequest { AlbumId = 99999, IsPublic = true });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.NotFound));
         }
 
         [Test]
@@ -182,25 +187,26 @@ namespace ShutterStream.Tests.Services.Admin
             var photo = DbContext.Photos.First(p => p.AlbumId == album.Id);
 
             // Act
-            await _adminService.SetAlbumCover(new SetAlbumCoverRequest { AlbumId = album.Id, PhotoId = photo.Id });
+            var result = await _adminService.SetAlbumCover(new SetAlbumCoverRequest { AlbumId = album.Id, PhotoId = photo.Id });
 
             // Assert
+            Assert.That(result.Success, Is.True);
             var updated = await DbContext.Albums.AsNoTracking().FirstAsync(a => a.Id == album.Id);
             Assert.That(updated.CoverPhotoId, Is.EqualTo(photo.Id));
         }
 
         [Test]
-        public async Task SetAlbumCover_WithPhotoFromAnotherAlbum_ShouldThrowBadRequestException()
+        public async Task SetAlbumCover_WithPhotoFromAnotherAlbum_ShouldReturnBadRequest()
         {
             // Arrange
             var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
             var otherPhoto = DbContext.Photos.First(p => p.Album.FolderName == "Private Album");
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<BadRequestException>(async () =>
-                await _adminService.SetAlbumCover(new SetAlbumCoverRequest { AlbumId = album.Id, PhotoId = otherPhoto.Id }));
+            var result = await _adminService.SetAlbumCover(new SetAlbumCoverRequest { AlbumId = album.Id, PhotoId = otherPhoto.Id });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.BadRequest));
 
-            Assert.That(exception.Message, Is.EqualTo("The cover photo must be in the album"));
+            Assert.That(result.Error, Is.EqualTo("The cover photo must be in the album"));
         }
 
         [Test]
@@ -210,9 +216,10 @@ namespace ShutterStream.Tests.Services.Admin
             var photo = DbContext.Photos.First(p => !p.IsHidden);
 
             // Act
-            await _adminService.SetPhotoVisibility(new SetPhotoVisibilityRequest { PhotoId = photo.Id, IsHidden = true });
+            var result = await _adminService.SetPhotoVisibility(new SetPhotoVisibilityRequest { PhotoId = photo.Id, IsHidden = true });
 
             // Assert
+            Assert.That(result.Success, Is.True);
             var updated = await DbContext.Photos.AsNoTracking().FirstAsync(p => p.Id == photo.Id);
             Assert.That(updated.IsHidden, Is.True);
         }
@@ -224,45 +231,46 @@ namespace ShutterStream.Tests.Services.Admin
             var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
 
             // Act
-            await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = album.Id });
+            var result = await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = album.Id });
 
             // Assert
+            Assert.That(result.Success, Is.True);
             _mockBackgroundJobClient.Verify(x => x.Create(
                 It.Is<Job>(job => job.Type == typeof(IPhotoCaptionService) && (int)job.Args[0] == album.Id && (bool)job.Args[1] == false),
                 It.IsAny<EnqueuedState>()), Times.Once);
         }
 
         [Test]
-        public async Task QueueAlbumCaptions_WhenNoApiKey_ShouldThrowBadRequestException()
+        public async Task QueueAlbumCaptions_WhenNoApiKey_ShouldReturnBadRequest()
         {
             // Arrange
             _mockAiCaptionHelper.Setup(x => x.IsEnabled).Returns(false);
             var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
 
             // Act & Assert
-            await Assert.ThrowsAsync<BadRequestException>(async () =>
-                await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = album.Id }));
+            var result = await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = album.Id });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.BadRequest));
             _mockBackgroundJobClient.Verify(x => x.Create(It.IsAny<Job>(), It.IsAny<IState>()), Times.Never);
         }
 
         [Test]
-        public async Task QueueAlbumCaptions_WhenJobAlreadyRunning_ShouldThrowConflictException()
+        public async Task QueueAlbumCaptions_WhenJobAlreadyRunning_ShouldReturnConflict()
         {
             // Arrange
             var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
             _captionJobStatusHelper.TryStartJob(album.Id);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ConflictException>(async () =>
-                await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = album.Id }));
+            var result = await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = album.Id });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.Conflict));
         }
 
         [Test]
-        public async Task QueueAlbumCaptions_WhenAlbumNotFound_ShouldThrowNotFoundException()
+        public async Task QueueAlbumCaptions_WhenAlbumNotFound_ShouldReturnNotFound()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = 99999 }));
+            var result = await _adminService.QueueAlbumCaptions(new GenerateAlbumCaptionsRequest { AlbumId = 99999 });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.NotFound));
         }
 
         [Test]
@@ -275,8 +283,8 @@ namespace ShutterStream.Tests.Services.Admin
             _captionJobStatusHelper.SetProgress(1, 0, 3);
 
             // Act
-            var result = await _adminService.GetAdminAlbum(album.Id);
-            var otherResult = await _adminService.GetAdminAlbum(otherAlbum.Id);
+            var result = (await _adminService.GetAdminAlbum(album.Id)).Value;
+            var otherResult = (await _adminService.GetAdminAlbum(otherAlbum.Id)).Value;
 
             // Assert
             Assert.That(result.CaptionStatus.IsRunning, Is.True);
@@ -296,9 +304,10 @@ namespace ShutterStream.Tests.Services.Admin
             await DbContext.SaveChangesAsync();
 
             // Act
-            await _adminService.UpdatePhotoCaption(new UpdatePhotoCaptionRequest { PhotoId = photo.Id, Title = " My title ", Description = " " });
+            var result = await _adminService.UpdatePhotoCaption(new UpdatePhotoCaptionRequest { PhotoId = photo.Id, Title = " My title ", Description = " " });
 
             // Assert
+            Assert.That(result.Success, Is.True);
             var updated = await DbContext.Photos.AsNoTracking().FirstAsync(p => p.Id == photo.Id);
             Assert.That(updated.Title, Is.EqualTo("My title"));
             Assert.That(updated.Description, Is.Null);

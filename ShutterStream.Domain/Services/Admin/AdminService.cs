@@ -4,12 +4,12 @@ using Serilog;
 using ShutterStream.Domain.Database.Context;
 using ShutterStream.Domain.DTOs.Admin.Requests;
 using ShutterStream.Domain.DTOs.Admin.Responses;
-using ShutterStream.Domain.Exceptions;
 using ShutterStream.Domain.Extensions;
 using ShutterStream.Domain.Interfaces.Api.Admin;
 using ShutterStream.Domain.Interfaces.Api.Captions;
 using ShutterStream.Domain.Interfaces.Api.Library;
 using ShutterStream.Domain.Interfaces.Helpers;
+using ShutterStream.Domain.Results;
 
 namespace ShutterStream.Domain.Services.Admin
 {
@@ -42,15 +42,17 @@ namespace ShutterStream.Domain.Services.Admin
             };
         }
 
-        public void QueueLibraryScan()
+        public Result QueueLibraryScan()
         {
             if (scanStatusHelper.GetStatus().IsRunning)
             {
-                throw new ConflictException("A library scan is already running");
+                return Result.ConflictFail("A library scan is already running");
             }
 
             backgroundJobClient.Enqueue<ILibraryScanService>(service => service.ScanLibrary());
             Log.Information("Library scan queued from the admin interface");
+
+            return Result.Ok();
         }
 
         public async Task<GetAdminAlbumsDto> GetAdminAlbums()
@@ -68,6 +70,7 @@ namespace ShutterStream.Domain.Services.Admin
                     a.AlbumDate,
                     PhotoCount = a.Photos.Count,
                     HiddenPhotoCount = a.Photos.Count(p => p.IsHidden),
+                    ViewCount = a.Photos.Sum(p => p.ViewCount),
                     CoverPhotoId = a.CoverPhotoId ?? a.Photos
                         .OrderBy(p => p.DateTaken ?? p.FileModifiedAt)
                         .ThenBy(p => p.FileName)
@@ -92,6 +95,7 @@ namespace ShutterStream.Domain.Services.Admin
                     AlbumDate = a.AlbumDate,
                     PhotoCount = a.PhotoCount,
                     HiddenPhotoCount = a.HiddenPhotoCount,
+                    ViewCount = a.ViewCount,
                     CoverPhotoId = a.CoverPhotoId,
                     CoverPhotoVersion = a.CoverPhotoId != null && coverVersions.TryGetValue(a.CoverPhotoId.Value, out var modified)
                         ? modified.ToImageVersion()
@@ -100,17 +104,22 @@ namespace ShutterStream.Domain.Services.Admin
             };
         }
 
-        public async Task<GetAdminAlbumDto> GetAdminAlbum(int albumId)
+        public async Task<Result<GetAdminAlbumDto>> GetAdminAlbum(int albumId)
         {
-            var album = await context.Albums.FirstOrDefaultAsync(a => a.Id == albumId) ?? throw new NotFoundException("Album not found");
+            var album = await context.Albums.FirstOrDefaultAsync(a => a.Id == albumId);
+
+            if (album == null)
+            {
+                return Result.NotFoundFail<GetAdminAlbumDto>("Album not found");
+            }
 
             var photos = await context.Photos
                 .Where(p => p.AlbumId == albumId)
                 .OrderForDisplay()
-                .Select(p => new { p.Id, p.FileName, p.Width, p.Height, p.FileModifiedAt, p.IsHidden, p.Title, p.Description, p.CaptionGeneratedAt })
+                .Select(p => new { p.Id, p.FileName, p.Width, p.Height, p.FileModifiedAt, p.IsHidden, p.ViewCount, p.Title, p.Description, p.CaptionGeneratedAt })
                 .ToListAsync();
 
-            return new GetAdminAlbumDto
+            return Result.Ok(new GetAdminAlbumDto
             {
                 AlbumId = album.Id,
                 FolderName = album.FolderName,
@@ -126,90 +135,132 @@ namespace ShutterStream.Domain.Services.Admin
                     Height = p.Height,
                     Version = p.FileModifiedAt.ToImageVersion(),
                     IsHidden = p.IsHidden,
+                    ViewCount = p.ViewCount,
                     Title = p.Title,
                     Description = p.Description,
                     IsAiCaption = p.CaptionGeneratedAt != null
                 }).ToArray(),
                 CaptionStatus = GetCaptionStatus(album.Id)
-            };
+            });
         }
 
-        public async Task UpdateAlbumDetails(UpdateAlbumDetailsRequest request)
+        public async Task<Result> UpdateAlbumDetails(UpdateAlbumDetailsRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Title))
             {
-                throw new BadRequestException("Album title cannot be empty");
+                return Result.Fail("Album title cannot be empty");
             }
 
-            var album = await context.Albums.FindAsync(request.AlbumId) ?? throw new NotFoundException("Album not found");
+            var album = await context.Albums.FindAsync(request.AlbumId);
+
+            if (album == null)
+            {
+                return Result.NotFoundFail("Album not found");
+            }
 
             album.Title = request.Title.Trim();
             album.Description = request.Description.Trim();
             await context.SaveChangesAsync();
 
             Log.Information($"Album {album.Id} details updated");
+
+            return Result.Ok();
         }
 
-        public async Task SetAlbumVisibility(SetAlbumVisibilityRequest request)
+        public async Task<Result> SetAlbumVisibility(SetAlbumVisibilityRequest request)
         {
-            var album = await context.Albums.FindAsync(request.AlbumId) ?? throw new NotFoundException("Album not found");
+            var album = await context.Albums.FindAsync(request.AlbumId);
+
+            if (album == null)
+            {
+                return Result.NotFoundFail("Album not found");
+            }
 
             album.IsPublic = request.IsPublic;
             await context.SaveChangesAsync();
 
             Log.Information($"Album {album.Id} ({album.FolderName}) is now {(request.IsPublic ? "public" : "private")}");
+
+            return Result.Ok();
         }
 
-        public async Task SetAlbumCover(SetAlbumCoverRequest request)
+        public async Task<Result> SetAlbumCover(SetAlbumCoverRequest request)
         {
-            var album = await context.Albums.FindAsync(request.AlbumId) ?? throw new NotFoundException("Album not found");
-            var photo = await context.Photos.FindAsync(request.PhotoId) ?? throw new NotFoundException("Photo not found");
+            var album = await context.Albums.FindAsync(request.AlbumId);
+
+            if (album == null)
+            {
+                return Result.NotFoundFail("Album not found");
+            }
+
+            var photo = await context.Photos.FindAsync(request.PhotoId);
+
+            if (photo == null)
+            {
+                return Result.NotFoundFail("Photo not found");
+            }
 
             if (photo.AlbumId != album.Id)
             {
-                throw new BadRequestException("The cover photo must be in the album");
+                return Result.Fail("The cover photo must be in the album");
             }
 
             album.CoverPhotoId = photo.Id;
             await context.SaveChangesAsync();
 
             Log.Information($"Album {album.Id} cover set to photo {photo.Id}");
+
+            return Result.Ok();
         }
 
-        public async Task SetPhotoVisibility(SetPhotoVisibilityRequest request)
+        public async Task<Result> SetPhotoVisibility(SetPhotoVisibilityRequest request)
         {
-            var photo = await context.Photos.FindAsync(request.PhotoId) ?? throw new NotFoundException("Photo not found");
+            var photo = await context.Photos.FindAsync(request.PhotoId);
+
+            if (photo == null)
+            {
+                return Result.NotFoundFail("Photo not found");
+            }
 
             photo.IsHidden = request.IsHidden;
             await context.SaveChangesAsync();
 
             Log.Information($"Photo {photo.Id} is now {(request.IsHidden ? "hidden" : "visible")}");
+
+            return Result.Ok();
         }
 
-        public async Task QueueAlbumCaptions(GenerateAlbumCaptionsRequest request)
+        public async Task<Result> QueueAlbumCaptions(GenerateAlbumCaptionsRequest request)
         {
             if (!aiCaptionHelper.IsEnabled)
             {
-                throw new BadRequestException("AI captions are not set up. Add a Gemini API key to the GeminiApiKey environmental setting");
+                return Result.Fail("AI captions are not set up. Add a Gemini API key to the GeminiApiKey environmental setting");
             }
 
             if (captionJobStatusHelper.GetStatus().RunningAlbumId != null)
             {
-                throw new ConflictException("A caption job is already running");
+                return Result.ConflictFail("A caption job is already running");
             }
 
             if (!await context.Albums.AnyAsync(a => a.Id == request.AlbumId))
             {
-                throw new NotFoundException("Album not found");
+                return Result.NotFoundFail("Album not found");
             }
 
             backgroundJobClient.Enqueue<IPhotoCaptionService>(service => service.GenerateAlbumCaptions(request.AlbumId, request.RegenerateExisting));
             Log.Information($"Caption job queued for album {request.AlbumId} (regenerate existing: {request.RegenerateExisting})");
+
+            return Result.Ok();
         }
 
-        public async Task UpdatePhotoCaption(UpdatePhotoCaptionRequest request)
+        public async Task<Result> UpdatePhotoCaption(UpdatePhotoCaptionRequest request)
         {
-            var photo = await context.Photos.FindAsync(request.PhotoId) ?? throw new NotFoundException("Photo not found");
+            var photo = await context.Photos.FindAsync(request.PhotoId);
+
+            if (photo == null)
+            {
+                return Result.NotFoundFail("Photo not found");
+            }
 
             var title = request.Title.Trim();
             var description = request.Description.Trim();
@@ -223,6 +274,8 @@ namespace ShutterStream.Domain.Services.Admin
             await context.SaveChangesAsync();
 
             Log.Information($"Photo {photo.Id} caption edited by hand");
+
+            return Result.Ok();
         }
 
         private AlbumCaptionStatus GetCaptionStatus(int albumId)

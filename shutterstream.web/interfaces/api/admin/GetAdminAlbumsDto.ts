@@ -9,6 +9,7 @@ export interface AdminAlbumItem {
   isPublic: boolean
   photoCount: number
   hiddenPhotoCount: number
+  viewCount: number
   coverPhotoId: number | null
   coverPhotoVersion: number | null
   albumDate: string | null

@@ -7,7 +7,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import classes from '@/css/photoViewer.module.css'
-import { doQueryGet } from '@/helpers/apiClient'
+import { doPost, doQueryGet } from '@/helpers/apiClient'
 import { QueryKeys } from '@/helpers/QueryKeys'
 import { getPhotoImageUrl } from '@/helpers/photoHelper'
 import { PhotoSize } from '@/interfaces/api/photos/PhotoSize'
@@ -29,6 +29,29 @@ export default function PhotoComponent({ photoId }: PhotoComponentProps) {
     queryFn: async () => await getPhoto(photoId)
   })
 
+  // Count a view once per photo per browser session, so refreshing or stepping back and forth
+  // doesn't inflate it. Recorded here rather than in GetPhoto, which also runs for prefetches
+  useEffect(() => {
+    if (photo === undefined) {
+      return
+    }
+
+    const viewedKey = `photoViewed:${photo.photoId}`
+
+    try {
+      if (window.sessionStorage.getItem(viewedKey) !== null) {
+        return
+      }
+      window.sessionStorage.setItem(viewedKey, '1')
+    } catch {
+      // Storage can be blocked, counting the view anyway is fine
+    }
+
+    doPost('/api/Photos/RecordPhotoView', { body: { photoId: photo.photoId } }).catch(() => {
+      // View counts are best effort only
+    })
+  }, [photo])
+
   // Warm up the neighbouring photos so stepping through an album feels instant
   useEffect(() => {
     if (photo === undefined) {
@@ -40,7 +63,7 @@ export default function PhotoComponent({ photoId }: PhotoComponentProps) {
         continue
       }
 
-      queryClient.fetchQuery({
+      queryClient.query({
         queryKey: [QueryKeys.Photo, neighbourId.toString()],
         queryFn: async () => await getPhoto(neighbourId)
       }).then(neighbour => {

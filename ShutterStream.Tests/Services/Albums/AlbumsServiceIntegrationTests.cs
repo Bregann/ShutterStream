@@ -1,4 +1,4 @@
-using ShutterStream.Domain.Exceptions;
+using ShutterStream.Domain.Results;
 using ShutterStream.Domain.Services.Albums;
 using ShutterStream.Tests.Infrastructure;
 
@@ -86,21 +86,22 @@ namespace ShutterStream.Tests.Services.Albums
             var photos = DbContext.Photos.Where(p => p.AlbumId == album.Id).OrderBy(p => p.FileName).ToList();
 
             // Act
-            var result = await _albumsService.GetAlbum(album.Id, false);
+            var result = (await _albumsService.GetAlbum(album.Id, false)).Value;
 
             // Assert
             Assert.That(result.Photos.Select(p => p.PhotoId), Is.EqualTo(new[] { photos[0].Id, photos[2].Id }));
         }
 
         [Test]
-        public async Task GetAlbum_WhenPrivateAndNotAdmin_ShouldThrowNotFoundException()
+        public async Task GetAlbum_WhenPrivateAndNotAdmin_ShouldReturnNotFound()
         {
             // Arrange
             var album = DbContext.Albums.First(a => a.FolderName == "Private Album");
 
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<NotFoundException>(async () => await _albumsService.GetAlbum(album.Id, false));
-            Assert.That(exception.Message, Is.EqualTo("Album not found"));
+            var result = await _albumsService.GetAlbum(album.Id, false);
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.NotFound));
+            Assert.That(result.Error, Is.EqualTo("Album not found"));
         }
 
         [Test]
@@ -110,7 +111,7 @@ namespace ShutterStream.Tests.Services.Albums
             var album = DbContext.Albums.First(a => a.FolderName == "Private Album");
 
             // Act
-            var result = await _albumsService.GetAlbum(album.Id, true);
+            var result = (await _albumsService.GetAlbum(album.Id, true)).Value;
 
             // Assert
             Assert.That(result.IsPublic, Is.False);
@@ -118,10 +119,11 @@ namespace ShutterStream.Tests.Services.Albums
         }
 
         [Test]
-        public async Task GetAlbum_WhenNotFound_ShouldThrowNotFoundException()
+        public async Task GetAlbum_WhenNotFound_ShouldReturnNotFound()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<NotFoundException>(async () => await _albumsService.GetAlbum(99999, true));
+            var result = await _albumsService.GetAlbum(99999, true);
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.NotFound));
         }
     }
 }

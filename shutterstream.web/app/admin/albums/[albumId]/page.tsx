@@ -1,7 +1,7 @@
 import AdminAlbumComponent from '@/components/pages/AdminAlbumComponent'
 import { doQueryGet } from '@/helpers/apiClient'
 import type { GetAdminAlbumDto } from '@/interfaces/api/admin/GetAdminAlbumDto'
-import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
+import { dehydrate, HydrationBoundary, noop, QueryClient } from '@tanstack/react-query'
 import { cookies } from 'next/headers'
 import { QueryKeys } from '@/helpers/QueryKeys'
 
@@ -16,10 +16,10 @@ export default async function AdminAlbumPage({ params }: { params: Promise<{ alb
       .map(c => `${c.name}=${c.value}`)
       .join('; ')
 
-    await queryClient.prefetchQuery({
+    await queryClient.query({
       queryKey: [QueryKeys.AdminAlbum, albumId],
       queryFn: async () => await doQueryGet<GetAdminAlbumDto>(`/api/Admin/GetAdminAlbum?albumId=${albumId}`, { cookieHeader })
-    })
+    }).catch(noop)
   }
 
   return (

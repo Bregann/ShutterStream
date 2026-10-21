@@ -80,6 +80,12 @@ namespace ShutterStream.Domain.Database.Models
         [Required]
         public bool ThumbnailsGenerated { get; set; } = false;
 
+        /// <summary>
+        /// Times the photo has been opened by a visitor. The admin's own views are not counted.
+        /// </summary>
+        [Required]
+        public int ViewCount { get; set; } = 0;
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

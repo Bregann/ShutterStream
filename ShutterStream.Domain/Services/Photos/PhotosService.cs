@@ -4,22 +4,22 @@ using ShutterStream.Domain.Database.Context;
 using ShutterStream.Domain.DTOs.Library;
 using ShutterStream.Domain.DTOs.Photos;
 using ShutterStream.Domain.Enums;
-using ShutterStream.Domain.Exceptions;
 using ShutterStream.Domain.Extensions;
 using ShutterStream.Domain.Interfaces.Api.Photos;
 using ShutterStream.Domain.Interfaces.Helpers;
+using ShutterStream.Domain.Results;
 
 namespace ShutterStream.Domain.Services.Photos
 {
     public class PhotosService(AppDbContext context, IPhotoLibraryHelper libraryHelper, IImageProcessingHelper imageProcessingHelper) : IPhotosService
     {
-        public async Task<GetPhotoDto> GetPhoto(int photoId, bool includePrivate)
+        public async Task<Result<GetPhotoDto>> GetPhoto(int photoId, bool includePrivate)
         {
             var photo = await context.Photos.FirstOrDefaultAsync(p => p.Id == photoId);
 
             if (photo == null || (!IsPubliclyVisible(photo.Album.IsPublic, photo.IsHidden) && !includePrivate))
             {
-                throw new NotFoundException("Photo not found");
+                return Result.NotFoundFail<GetPhotoDto>("Photo not found");
             }
 
             // Hidden photos are left out of the sequence, apart from this one when the admin is previewing it
@@ -31,7 +31,7 @@ namespace ShutterStream.Domain.Services.Photos
 
             var index = albumPhotoIds.IndexOf(photoId);
 
-            return new GetPhotoDto
+            return Result.Ok(new GetPhotoDto
             {
                 PhotoId = photo.Id,
                 Title = photo.Title,
@@ -53,10 +53,10 @@ namespace ShutterStream.Domain.Services.Photos
                 Aperture = photo.Aperture,
                 ExposureTime = photo.ExposureTime,
                 Iso = photo.Iso
-            };
+            });
         }
 
-        public async Task<PhotoImageResult> GetPhotoImage(int photoId, PhotoSize size, bool includePrivate)
+        public async Task<Result<PhotoImageResult>> GetPhotoImage(int photoId, PhotoSize size, bool includePrivate)
         {
             var photo = await context.Photos
                 .Where(p => p.Id == photoId)
@@ -65,14 +65,14 @@ namespace ShutterStream.Domain.Services.Photos
 
             if (photo == null)
             {
-                throw new NotFoundException("Photo not found");
+                return Result.NotFoundFail<PhotoImageResult>("Photo not found");
             }
 
             var isPubliclyVisible = IsPubliclyVisible(photo.AlbumIsPublic, photo.IsHidden);
 
             if (!isPubliclyVisible && !includePrivate)
             {
-                throw new NotFoundException("Photo not found");
+                return Result.NotFoundFail<PhotoImageResult>("Photo not found");
             }
 
             var thumbnailPath = libraryHelper.GetThumbnailPath(photo.Id, size);
@@ -86,7 +86,7 @@ namespace ShutterStream.Domain.Services.Photos
                 if (!File.Exists(sourcePath))
                 {
                     Log.Warning($"Source file missing for photo {photo.Id} at {sourcePath}");
-                    throw new NotFoundException("Photo file not found");
+                    return Result.NotFoundFail<PhotoImageResult>("Photo file not found");
                 }
 
                 var targets = Enum.GetValues<PhotoSize>()
@@ -100,12 +100,23 @@ namespace ShutterStream.Domain.Services.Photos
                     .ExecuteUpdateAsync(s => s.SetProperty(p => p.ThumbnailsGenerated, true));
             }
 
-            return new PhotoImageResult
+            return Result.Ok(new PhotoImageResult
             {
                 FilePath = thumbnailPath,
                 LastModified = photo.FileModifiedAt,
                 IsPubliclyVisible = isPubliclyVisible
-            };
+            });
+        }
+
+        public async Task<Result> RecordPhotoView(int photoId)
+        {
+            // Incremented in the database so simultaneous views can't overwrite each other.
+            // Only photos the public can see are counted, matching what GetPhoto would show them
+            var updated = await context.Photos
+                .Where(p => p.Id == photoId && p.Album.IsPublic && !p.IsHidden)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.ViewCount, p => p.ViewCount + 1));
+
+            return updated == 0 ? Result.NotFoundFail("Photo not found") : Result.Ok();
         }
 
         private static bool IsPubliclyVisible(bool albumIsPublic, bool photoIsHidden)

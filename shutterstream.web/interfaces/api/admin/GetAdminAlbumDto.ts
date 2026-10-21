@@ -27,6 +27,7 @@ export interface AdminPhotoItem {
   height: number
   version: number
   isHidden: boolean
+  viewCount: number
   title: string | null
   description: string | null
   isAiCaption: boolean

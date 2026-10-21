@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using ShutterStream.Core.Extensions;
 using ShutterStream.Domain.DTOs.Auth.Requests;
-using ShutterStream.Domain.Exceptions;
 using ShutterStream.Domain.Interfaces.Api.Auth;
+using ShutterStream.Domain.Results;
 
 namespace ShutterStream.Core.Controllers
 {
@@ -14,9 +15,14 @@ namespace ShutterStream.Core.Controllers
         [EnableRateLimiting(RateLimitPolicies.Login)]
         public async Task<ActionResult> LoginUser([FromBody] LoginUserRequest request)
         {
-            var loginData = await authService.LoginUser(request);
+            var result = await authService.LoginUser(request);
 
-            SetAuthCookies(loginData.AccessToken, loginData.RefreshToken);
+            if (!result.Success)
+            {
+                return result.ToErrorResponse();
+            }
+
+            SetAuthCookies(result.Value.AccessToken, result.Value.RefreshToken);
 
             return Ok();
         }
@@ -29,20 +35,19 @@ namespace ShutterStream.Core.Controllers
             if (string.IsNullOrEmpty(refreshToken))
             {
                 ClearAuthCookies();
-                throw new UnauthorizedException("No refresh token provided");
+                return Result.UnauthorizedFail("No refresh token provided").ToErrorResponse();
             }
 
-            try
-            {
-                var newTokens = await authService.RefreshToken(refreshToken);
-                SetAuthCookies(newTokens.AccessToken, newTokens.RefreshToken);
-                return Ok();
-            }
-            catch (UnauthorizedException)
+            var result = await authService.RefreshToken(refreshToken);
+
+            if (!result.Success)
             {
                 ClearAuthCookies();
-                throw;
+                return result.ToErrorResponse();
             }
+
+            SetAuthCookies(result.Value.AccessToken, result.Value.RefreshToken);
+            return Ok();
         }
 
         [HttpPost]

@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using ShutterStream.Domain.Database.Context;
 using ShutterStream.Domain.DTOs.Albums;
-using ShutterStream.Domain.Exceptions;
 using ShutterStream.Domain.Extensions;
 using ShutterStream.Domain.Interfaces.Api.Albums;
+using ShutterStream.Domain.Results;
 
 namespace ShutterStream.Domain.Services.Albums
 {
@@ -58,14 +58,14 @@ namespace ShutterStream.Domain.Services.Albums
             };
         }
 
-        public async Task<GetAlbumDto> GetAlbum(int albumId, bool includePrivate)
+        public async Task<Result<GetAlbumDto>> GetAlbum(int albumId, bool includePrivate)
         {
             var album = await context.Albums.FirstOrDefaultAsync(a => a.Id == albumId);
 
             // Private albums return the same error as missing ones so their existence isn't leaked
             if (album == null || (!album.IsPublic && !includePrivate))
             {
-                throw new NotFoundException("Album not found");
+                return Result.NotFoundFail<GetAlbumDto>("Album not found");
             }
 
             var photos = await context.Photos
@@ -74,7 +74,7 @@ namespace ShutterStream.Domain.Services.Albums
                 .Select(p => new { p.Id, p.Width, p.Height, p.FileModifiedAt, p.Title })
                 .ToListAsync();
 
-            return new GetAlbumDto
+            return Result.Ok(new GetAlbumDto
             {
                 AlbumId = album.Id,
                 Title = album.Title,
@@ -89,7 +89,7 @@ namespace ShutterStream.Domain.Services.Albums
                     Version = p.FileModifiedAt.ToImageVersion(),
                     Title = p.Title
                 }).ToArray()
-            };
+            });
         }
     }
 }

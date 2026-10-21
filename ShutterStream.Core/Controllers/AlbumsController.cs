@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using ShutterStream.Core.Extensions;
 using ShutterStream.Domain.DTOs.Albums;
 using ShutterStream.Domain.Interfaces.Api.Albums;
 
@@ -19,8 +20,8 @@ namespace ShutterStream.Core.Controllers
         public async Task<ActionResult<GetAlbumDto>> GetAlbum([FromQuery] int albumId)
         {
             // The admin can preview private albums, everyone else only sees public ones
-            var album = await albumsService.GetAlbum(albumId, User.Identity?.IsAuthenticated == true);
-            return Ok(album);
+            var result = await albumsService.GetAlbum(albumId, User.Identity?.IsAuthenticated == true);
+            return result.ToActionResult();
         }
     }
 }

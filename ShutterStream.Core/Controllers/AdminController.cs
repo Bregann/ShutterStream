@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using ShutterStream.Core.Extensions;
 using ShutterStream.Domain.DTOs.Admin.Requests;
 using ShutterStream.Domain.DTOs.Admin.Responses;
 using ShutterStream.Domain.Interfaces.Api.Admin;
@@ -21,8 +22,7 @@ namespace ShutterStream.Core.Controllers
         [HttpPost]
         public ActionResult ScanLibrary()
         {
-            adminService.QueueLibraryScan();
-            return Ok();
+            return adminService.QueueLibraryScan().ToActionResult();
         }
 
         [HttpGet]
@@ -35,50 +35,50 @@ namespace ShutterStream.Core.Controllers
         [HttpGet]
         public async Task<ActionResult<GetAdminAlbumDto>> GetAdminAlbum([FromQuery] int albumId)
         {
-            var album = await adminService.GetAdminAlbum(albumId);
-            return Ok(album);
+            var result = await adminService.GetAdminAlbum(albumId);
+            return result.ToActionResult();
         }
 
         [HttpPatch]
         public async Task<ActionResult> UpdateAlbumDetails([FromBody] UpdateAlbumDetailsRequest request)
         {
-            await adminService.UpdateAlbumDetails(request);
-            return Ok();
+            var result = await adminService.UpdateAlbumDetails(request);
+            return result.ToActionResult();
         }
 
         [HttpPatch]
         public async Task<ActionResult> SetAlbumVisibility([FromBody] SetAlbumVisibilityRequest request)
         {
-            await adminService.SetAlbumVisibility(request);
-            return Ok();
+            var result = await adminService.SetAlbumVisibility(request);
+            return result.ToActionResult();
         }
 
         [HttpPatch]
         public async Task<ActionResult> SetAlbumCover([FromBody] SetAlbumCoverRequest request)
         {
-            await adminService.SetAlbumCover(request);
-            return Ok();
+            var result = await adminService.SetAlbumCover(request);
+            return result.ToActionResult();
         }
 
         [HttpPatch]
         public async Task<ActionResult> SetPhotoVisibility([FromBody] SetPhotoVisibilityRequest request)
         {
-            await adminService.SetPhotoVisibility(request);
-            return Ok();
+            var result = await adminService.SetPhotoVisibility(request);
+            return result.ToActionResult();
         }
 
         [HttpPost]
         public async Task<ActionResult> GenerateAlbumCaptions([FromBody] GenerateAlbumCaptionsRequest request)
         {
-            await adminService.QueueAlbumCaptions(request);
-            return Ok();
+            var result = await adminService.QueueAlbumCaptions(request);
+            return result.ToActionResult();
         }
 
         [HttpPatch]
         public async Task<ActionResult> UpdatePhotoCaption([FromBody] UpdatePhotoCaptionRequest request)
         {
-            await adminService.UpdatePhotoCaption(request);
-            return Ok();
+            var result = await adminService.UpdatePhotoCaption(request);
+            return result.ToActionResult();
         }
     }
 }

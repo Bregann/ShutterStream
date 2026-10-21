@@ -16,7 +16,7 @@ export default function LibraryStatusCard() {
 
   // Hangfire can take a few seconds to pick the scan up, so keep polling until it actually starts
   const [awaitingScanStart, setAwaitingScanStart] = useState(false)
-  const wasScanRunning = useRef(false)
+  const lastSeenCompletedAt = useRef<string | null | undefined>(undefined)
 
   const { data: status } = useQuery({
     queryKey: [QueryKeys.LibraryStatus],
@@ -33,13 +33,18 @@ export default function LibraryStatusCard() {
       setAwaitingScanStart(false)
     }
 
-    // Once a scan finishes the album lists are out of date
-    if (wasScanRunning.current && !status.isScanRunning) {
+    // Once a scan finishes the album lists are out of date. A small scan can start and finish
+    // between two polls without ever being seen as running, so watch the completion time instead
+    const scanCompleted = lastSeenCompletedAt.current !== undefined &&
+      status.lastScanCompletedAt !== lastSeenCompletedAt.current
+
+    if (scanCompleted) {
+      setAwaitingScanStart(false)
       queryClient.invalidateQueries({ queryKey: [QueryKeys.AdminAlbums] })
       queryClient.invalidateQueries({ queryKey: [QueryKeys.Albums] })
     }
 
-    wasScanRunning.current = status.isScanRunning
+    lastSeenCompletedAt.current = status.lastScanCompletedAt
   }, [status, queryClient])
 
   // Stop waiting eventually in case the scan finished between two polls

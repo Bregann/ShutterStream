@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShutterStream.Domain.DTOs.Auth.Requests;
-using ShutterStream.Domain.Exceptions;
+using ShutterStream.Domain.Results;
 using ShutterStream.Domain.Services.Auth;
 using ShutterStream.Tests.Infrastructure;
 
@@ -26,7 +26,7 @@ namespace ShutterStream.Tests.Services.Auth
         public async Task LoginUser_WithValidCredentials_ShouldReturnTokensAndSaveRefreshToken()
         {
             // Act
-            var result = await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" });
+            var result = (await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" })).Value;
 
             // Assert
             Assert.That(result.AccessToken, Is.Not.Empty);
@@ -38,40 +38,40 @@ namespace ShutterStream.Tests.Services.Auth
         public async Task LoginUser_ShouldIgnoreUsernameCaseAndWhitespace()
         {
             // Act
-            var result = await _authService.LoginUser(new LoginUserRequest { Username = "  TestUser ", Password = "test123!" });
+            var result = (await _authService.LoginUser(new LoginUserRequest { Username = "  TestUser ", Password = "test123!" })).Value;
 
             // Assert
             Assert.That(result.AccessToken, Is.Not.Empty);
         }
 
         [Test]
-        public async Task LoginUser_WithWrongPassword_ShouldThrowUnauthorizedException()
+        public async Task LoginUser_WithWrongPassword_ShouldReturnUnauthorized()
         {
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<UnauthorizedException>(async () =>
-                await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "wrong" }));
+            var result = await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "wrong" });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.Unauthorized));
 
-            Assert.That(exception.Message, Is.EqualTo("Invalid username or password"));
+            Assert.That(result.Error, Is.EqualTo("Invalid username or password"));
         }
 
         [Test]
         public async Task LoginUser_WithUnknownUser_ShouldThrowSameMessageAsWrongPassword()
         {
             // Act & Assert
-            var exception = await Assert.ThrowsAsync<UnauthorizedException>(async () =>
-                await _authService.LoginUser(new LoginUserRequest { Username = "nobody", Password = "test123!" }));
+            var result = await _authService.LoginUser(new LoginUserRequest { Username = "nobody", Password = "test123!" });
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.Unauthorized));
 
-            Assert.That(exception.Message, Is.EqualTo("Invalid username or password"));
+            Assert.That(result.Error, Is.EqualTo("Invalid username or password"));
         }
 
         [Test]
         public async Task RefreshToken_WithValidToken_ShouldRotateToken()
         {
             // Arrange
-            var login = await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" });
+            var login = (await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" })).Value;
 
             // Act
-            var refreshed = await _authService.RefreshToken(login.RefreshToken);
+            var refreshed = (await _authService.RefreshToken(login.RefreshToken)).Value;
 
             // Assert
             Assert.That(refreshed.RefreshToken, Is.Not.EqualTo(login.RefreshToken));
@@ -81,34 +81,37 @@ namespace ShutterStream.Tests.Services.Auth
         }
 
         [Test]
-        public async Task RefreshToken_WithRevokedToken_ShouldThrowUnauthorizedException()
+        public async Task RefreshToken_WithRevokedToken_ShouldReturnUnauthorized()
         {
             // Arrange
-            var login = await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" });
+            var login = (await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" })).Value;
             await _authService.RefreshToken(login.RefreshToken);
 
             // Act & Assert
-            await Assert.ThrowsAsync<UnauthorizedException>(async () => await _authService.RefreshToken(login.RefreshToken));
+            var result = await _authService.RefreshToken(login.RefreshToken);
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.Unauthorized));
         }
 
         [Test]
-        public async Task RefreshToken_WithUnknownToken_ShouldThrowUnauthorizedException()
+        public async Task RefreshToken_WithUnknownToken_ShouldReturnUnauthorized()
         {
             // Act & Assert
-            await Assert.ThrowsAsync<UnauthorizedException>(async () => await _authService.RefreshToken("not-a-real-token"));
+            var result = await _authService.RefreshToken("not-a-real-token");
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.Unauthorized));
         }
 
         [Test]
         public async Task DeleteUserSession_ShouldRevokeRefreshToken()
         {
             // Arrange
-            var login = await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" });
+            var login = (await _authService.LoginUser(new LoginUserRequest { Username = "testuser", Password = "test123!" })).Value;
 
             // Act
             await _authService.DeleteUserSession(login.RefreshToken);
 
             // Assert
-            await Assert.ThrowsAsync<UnauthorizedException>(async () => await _authService.RefreshToken(login.RefreshToken));
+            var result = await _authService.RefreshToken(login.RefreshToken);
+            Assert.That(result.ErrorType, Is.EqualTo(ResultErrorType.Unauthorized));
         }
 
         [Test]

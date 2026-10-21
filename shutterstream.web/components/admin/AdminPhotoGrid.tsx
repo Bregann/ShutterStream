@@ -137,9 +137,15 @@ export default function AdminPhotoGrid({ album }: AdminPhotoGridProps) {
                       <IconSparkles size="0.8rem" color="var(--mantine-color-violet-4)" style={{ flexShrink: 0 }} />
                     </Tooltip>
                   )}
-                  <Text size="xs" c={photo.title === null ? 'dimmed' : undefined} lineClamp={1}>
+                  <Text size="xs" c={photo.title === null ? 'dimmed' : undefined} lineClamp={1} style={{ flex: 1 }}>
                     {photo.title ?? 'No caption'}
                   </Text>
+                  <Tooltip label={`${photo.viewCount.toLocaleString()} ${photo.viewCount === 1 ? 'view' : 'views'}`}>
+                    <Group gap={2} wrap="nowrap" style={{ flexShrink: 0 }}>
+                      <IconEye size="0.8rem" color="var(--mantine-color-dimmed)" />
+                      <Text size="xs" c="dimmed">{photo.viewCount.toLocaleString()}</Text>
+                    </Group>
+                  </Tooltip>
                 </Group>
               </div>
             )

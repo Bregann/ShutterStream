@@ -6,8 +6,8 @@ using ShutterStream.Domain.Database.Context;
 using ShutterStream.Domain.Database.Models;
 using ShutterStream.Domain.DTOs.Auth.Requests;
 using ShutterStream.Domain.DTOs.Auth.Responses;
-using ShutterStream.Domain.Exceptions;
 using ShutterStream.Domain.Interfaces.Api.Auth;
+using ShutterStream.Domain.Results;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -23,7 +23,7 @@ namespace ShutterStream.Domain.Services.Auth
         // either way and the response time can't be used to discover the username
         private static readonly string _dummyPasswordHash = new PasswordHasher<User>().HashPassword(new User(), Guid.NewGuid().ToString());
 
-        public async Task<LoginUserResponse> LoginUser(LoginUserRequest request)
+        public async Task<Result<LoginUserResponse>> LoginUser(LoginUserRequest request)
         {
             Log.Information($"Logging in user {request.Username}");
 
@@ -34,13 +34,13 @@ namespace ShutterStream.Domain.Services.Auth
             {
                 _passwordHasher.VerifyHashedPassword(new User(), _dummyPasswordHash, request.Password);
                 Log.Information($"User not found {request.Username}");
-                throw new UnauthorizedException("Invalid username or password");
+                return Result.UnauthorizedFail<LoginUserResponse>("Invalid username or password");
             }
 
             if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             {
                 Log.Information($"Invalid password for user {request.Username}");
-                throw new UnauthorizedException("Invalid username or password");
+                return Result.UnauthorizedFail<LoginUserResponse>("Invalid username or password");
             }
 
             var token = GenerateJwtToken(user);
@@ -50,14 +50,14 @@ namespace ShutterStream.Domain.Services.Auth
 
             Log.Information($"User logged in {request.Username}");
 
-            return new LoginUserResponse
+            return Result.Ok(new LoginUserResponse
             {
                 AccessToken = token,
                 RefreshToken = refreshToken
-            };
+            });
         }
 
-        public async Task<LoginUserResponse> RefreshToken(string userRefreshToken)
+        public async Task<Result<LoginUserResponse>> RefreshToken(string userRefreshToken)
         {
             // Never log the raw token - it is a credential
             var tokenFingerprint = Fingerprint(userRefreshToken);
@@ -68,19 +68,19 @@ namespace ShutterStream.Domain.Services.Auth
             if (refreshToken == null)
             {
                 Log.Warning("[Refresh] REJECTED - token {Fingerprint} not found in database", tokenFingerprint);
-                throw new UnauthorizedException("Token not found");
+                return Result.UnauthorizedFail<LoginUserResponse>("Token not found");
             }
 
             if (refreshToken.IsRevoked)
             {
                 Log.Warning("[Refresh] REJECTED - token {Fingerprint} already revoked for user {UserId}", tokenFingerprint, refreshToken.UserId);
-                throw new UnauthorizedException("Refresh token has been revoked");
+                return Result.UnauthorizedFail<LoginUserResponse>("Refresh token has been revoked");
             }
 
             if (refreshToken.ExpiresAt < DateTime.UtcNow)
             {
                 Log.Warning("[Refresh] REJECTED - token {Fingerprint} expired at {ExpiresAt} for user {UserId}", tokenFingerprint, refreshToken.ExpiresAt, refreshToken.UserId);
-                throw new UnauthorizedException("Refresh token expired");
+                return Result.UnauthorizedFail<LoginUserResponse>("Refresh token expired");
             }
 
             var user = await context.Users.FirstOrDefaultAsync(u => u.Id == refreshToken.UserId);
@@ -88,7 +88,7 @@ namespace ShutterStream.Domain.Services.Auth
             if (user == null)
             {
                 Log.Information($"User not found for token {refreshToken.UserId}");
-                throw new UnauthorizedException("User not found");
+                return Result.UnauthorizedFail<LoginUserResponse>("User not found");
             }
 
             var token = GenerateJwtToken(user);
@@ -112,11 +112,11 @@ namespace ShutterStream.Domain.Services.Auth
 
             Log.Information("[Refresh] SUCCESS - user {UserId} rotated {OldFingerprint} -> {NewFingerprint}", refreshToken.UserId, tokenFingerprint, Fingerprint(newRefreshToken));
 
-            return new LoginUserResponse
+            return Result.Ok(new LoginUserResponse
             {
                 AccessToken = token,
                 RefreshToken = newRefreshToken
-            };
+            });
         }
 
         public async Task DeleteUserSession(string userRefreshToken)

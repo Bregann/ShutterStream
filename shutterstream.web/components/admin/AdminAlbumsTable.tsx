@@ -57,6 +57,7 @@ export default function AdminAlbumsTable({ albums }: AdminAlbumsTableProps) {
                 <Table.Th style={{ width: 90 }} />
                 <Table.Th>Album</Table.Th>
                 <Table.Th>Photos</Table.Th>
+                <Table.Th>Views</Table.Th>
                 <Table.Th>Public</Table.Th>
                 <Table.Th style={{ width: 90 }}>Actions</Table.Th>
               </Table.Tr>
@@ -95,6 +96,9 @@ export default function AdminAlbumsTable({ albums }: AdminAlbumsTableProps) {
                         <Badge size="sm" variant="light" color="gray">{album.hiddenPhotoCount} hidden</Badge>
                       )}
                     </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">{album.viewCount.toLocaleString()}</Text>
                   </Table.Td>
                   <Table.Td>
                     <Switch

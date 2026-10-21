@@ -44,7 +44,7 @@ namespace ShutterStream.Domain.Helpers
             await context.EnvironmentalSettings.AddAsync(new EnvironmentalSetting
             {
                 Key = EnvironmentalSettingEnum.GeminiModel.ToString(),
-                Value = DatabaseBootstrapHelper.DefaultGeminiModel
+                Value = "gemini-3.8-flash"
             });
 
             await context.SaveChangesAsync();
