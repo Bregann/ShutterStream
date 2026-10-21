@@ -9,10 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v5
         with:
           node-version-file: shutterstream.web/.nvmrc
 

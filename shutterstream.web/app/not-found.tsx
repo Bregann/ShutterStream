@@ -1,3 +1,5 @@
+'use client'
+
 import { Button, Center, Stack, Text, Title } from '@mantine/core'
 import Link from 'next/link'
 
