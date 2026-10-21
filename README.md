@@ -116,11 +116,10 @@ Release builds apply pending migrations on startup.
 | `JwtKey`, `JwtValidIssuer`, `JwtValidAudience` | JWT signing settings |
 | `PhotoLibraryPath` | Photo library folder, defaults to `/photos` (mount read only) |
 | `PhotoCachePath` | Generated thumbnails, defaults to `/app/PhotoCache` (needs to be persisted) |
-
-Migrations run automatically on start, but the admin login and environmental settings are added to the database by hand before the first start:
-
-- A row in `Users` for the admin login, with the password hashed by ASP.NET Identity's `PasswordHasher`
-- Rows in `EnvironmentalSettings` for `HangfireUsername`, `HangfirePassword`, `GeminiApiKey` (leave the value empty to turn AI captions off) and `GeminiModel` (e.g. `gemini-3.8-flash`). The API won't start without all four
+| `AdminUsername`, `AdminPassword` | Creates the admin login on first start. Ignored once a user exists |
+| `HangfireUsername`, `HangfirePassword` | Optional, the Hangfire dashboard login defaults to the admin login |
+| `GEMINI_API_KEY` | Optional, turns on AI captions. Only read on first start to create the `GeminiApiKey` environmental setting - change it in the database after that |
+| `GeminiModel` | Optional, defaults to `gemini-3.8-flash`. Also only read on first start (`GeminiModel` environmental setting) |
 
 ### How AI captions work
 
