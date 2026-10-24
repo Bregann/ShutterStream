@@ -1,8 +1,7 @@
 import PhotoComponent from '@/components/pages/PhotoComponent'
 import { doQueryGet } from '@/helpers/apiClient'
-import { getPhotoImageUrl } from '@/helpers/photoHelper'
 import { QueryKeys } from '@/helpers/QueryKeys'
-import { PhotoSize } from '@/interfaces/api/photos/PhotoSize'
+import { buildShareMetadata } from '@/helpers/seo'
 import type { GetPhotoDto } from '@/interfaces/api/photos/GetPhotoDto'
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { cookies } from 'next/headers'
@@ -34,13 +33,15 @@ export async function generateMetadata({ params }: { params: Promise<{ photoId: 
     return { title: 'Photo not found' }
   }
 
-  return {
-    title: photo.title ?? `${photo.albumTitle} (${photo.positionInAlbum} of ${photo.albumPhotoCount})`,
-    description: photo.description ?? undefined,
-    openGraph: {
-      images: [getPhotoImageUrl(photo.photoId, PhotoSize.Large, photo.version)]
-    }
-  }
+  const title = photo.title ?? `${photo.albumTitle} (${photo.positionInAlbum} of ${photo.albumPhotoCount})`
+
+  return buildShareMetadata({
+    title,
+    description: photo.description ?? `Photo ${photo.positionInAlbum} of ${photo.albumPhotoCount} from ${photo.albumTitle}`,
+    path: `/photo/${photo.photoId}`,
+    photo,
+    imageAlt: title
+  })
 }
 
 export default async function PhotoPage({ params }: { params: Promise<{ photoId: string }> }) {

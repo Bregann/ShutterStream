@@ -93,6 +93,38 @@ namespace ShutterStream.Tests.Services.Albums
         }
 
         [Test]
+        public async Task GetAlbum_ShouldReturnTheChosenCover()
+        {
+            // Arrange
+            var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
+            var photos = DbContext.Photos.Where(p => p.AlbumId == album.Id).OrderBy(p => p.FileName).ToList();
+            album.CoverPhotoId = photos[2].Id;
+            await DbContext.SaveChangesAsync();
+
+            // Act
+            var result = (await _albumsService.GetAlbum(album.Id, false)).Value;
+
+            // Assert
+            Assert.That(result.CoverPhotoId, Is.EqualTo(photos[2].Id));
+        }
+
+        [Test]
+        public async Task GetAlbum_WhenCoverIsHidden_ShouldFallBackToTheFirstPhoto()
+        {
+            // Arrange - the second photo in the seeded public album is hidden
+            var album = DbContext.Albums.First(a => a.FolderName == "Public Album");
+            var photos = DbContext.Photos.Where(p => p.AlbumId == album.Id).OrderBy(p => p.FileName).ToList();
+            album.CoverPhotoId = photos[1].Id;
+            await DbContext.SaveChangesAsync();
+
+            // Act
+            var result = (await _albumsService.GetAlbum(album.Id, false)).Value;
+
+            // Assert
+            Assert.That(result.CoverPhotoId, Is.EqualTo(photos[0].Id));
+        }
+
+        [Test]
         public async Task GetAlbum_WhenPrivateAndNotAdmin_ShouldReturnNotFound()
         {
             // Arrange

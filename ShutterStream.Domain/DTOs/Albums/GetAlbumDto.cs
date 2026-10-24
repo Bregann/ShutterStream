@@ -7,6 +7,13 @@ namespace ShutterStream.Domain.DTOs.Albums
         public required string Description { get; set; }
         public required bool IsPublic { get; set; }
         public DateTime? AlbumDate { get; set; }
+
+        /// <summary>
+        /// The photo used when the album is shared. The chosen cover, or the first photo if it has none
+        /// or it is hidden. Always one of the photos in <see cref="Photos"/>, null if the album is empty
+        /// </summary>
+        public int? CoverPhotoId { get; set; }
+
         public required AlbumPhotoItem[] Photos { get; set; }
     }
 

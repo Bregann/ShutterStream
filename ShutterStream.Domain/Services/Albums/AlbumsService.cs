@@ -81,6 +81,7 @@ namespace ShutterStream.Domain.Services.Albums
                 Description = album.Description,
                 IsPublic = album.IsPublic,
                 AlbumDate = album.AlbumDate,
+                CoverPhotoId = photos.Any(p => p.Id == album.CoverPhotoId) ? album.CoverPhotoId : photos.FirstOrDefault()?.Id,
                 Photos = photos.Select(p => new AlbumPhotoItem
                 {
                     PhotoId = p.Id,

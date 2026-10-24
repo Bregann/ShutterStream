@@ -4,6 +4,7 @@ export interface GetAlbumDto {
   description: string
   isPublic: boolean
   albumDate: string | null
+  coverPhotoId: number | null
   photos: AlbumPhotoItem[]
 }
 

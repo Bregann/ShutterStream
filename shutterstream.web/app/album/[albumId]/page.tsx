@@ -1,8 +1,8 @@
 import AlbumComponent from '@/components/pages/AlbumComponent'
 import { doQueryGet } from '@/helpers/apiClient'
-import { getPhotoImageUrl } from '@/helpers/photoHelper'
+import { formatAlbumDate } from '@/helpers/dateHelper'
 import { QueryKeys } from '@/helpers/QueryKeys'
-import { PhotoSize } from '@/interfaces/api/photos/PhotoSize'
+import { buildShareMetadata } from '@/helpers/seo'
 import type { GetAlbumDto } from '@/interfaces/api/albums/GetAlbumDto'
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query'
 import { cookies } from 'next/headers'
@@ -34,15 +34,23 @@ export async function generateMetadata({ params }: { params: Promise<{ albumId: 
     return { title: 'Album not found' }
   }
 
-  const cover = album.photos[0]
+  const cover = album.photos.find(p => p.photoId === album.coverPhotoId) ?? album.photos.at(0)
+
+  // e.g. "42 photos · March 2025", shown under the description so the preview always says what's in it
+  const summary = [
+    `${album.photos.length} ${album.photos.length === 1 ? 'photo' : 'photos'}`,
+    album.albumDate !== null ? formatAlbumDate(album.albumDate) : null
+  ].filter(part => part !== null).join(' · ')
 
   return {
-    title: album.title,
-    description: album.description !== '' ? album.description : `${album.photos.length} photos`,
-    robots: album.isPublic ? undefined : { index: false },
-    openGraph: cover !== undefined
-      ? { images: [getPhotoImageUrl(cover.photoId, PhotoSize.Large, cover.version)] }
-      : undefined
+    ...buildShareMetadata({
+      title: album.title,
+      description: album.description !== '' ? `${album.description}\n\n${summary}` : summary,
+      path: `/album/${album.albumId}`,
+      photo: cover,
+      imageAlt: cover?.title ?? album.title
+    }),
+    robots: album.isPublic ? undefined : { index: false }
   }
 }
 
