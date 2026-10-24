@@ -117,9 +117,8 @@ Release builds apply pending migrations on startup.
 | `PhotoLibraryPath` | Photo library folder, defaults to `/photos` (mount read only) |
 | `PhotoCachePath` | Generated thumbnails, defaults to `/app/PhotoCache` (needs to be persisted) |
 | `AdminUsername`, `AdminPassword` | Creates the admin login on first start. Ignored once a user exists |
-| `HangfireUsername`, `HangfirePassword` | Optional, the Hangfire dashboard login defaults to the admin login |
-| `GEMINI_API_KEY` | Optional, turns on AI captions. Only read on first start to create the `GeminiApiKey` environmental setting - change it in the database after that |
-| `GeminiModel` | Optional, defaults to `gemini-3.8-flash`. Also only read on first start (`GeminiModel` environmental setting) |
+
+Migrations run automatically on start, but the environmental settings are added to the database by hand before the first start: rows in `EnvironmentalSettings` for `HangfireUsername`, `HangfirePassword`, `GeminiApiKey` (leave the value empty to turn AI captions off) and `GeminiModel` (e.g. `gemini-3.8-flash`). The API won't start without all four
 
 ### How AI captions work
 

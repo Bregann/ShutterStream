@@ -30,6 +30,8 @@ using Hangfire.MemoryStorage;
 using Testcontainers.PostgreSql;
 #else
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Identity;
+using ShutterStream.Domain.Database.Models;
 #endif
 
 Log.Logger = new LoggerConfiguration()
@@ -197,12 +199,33 @@ using (var scope = app.Services.CreateScope())
 // The debug database is recreated on every start, so scan straight away to populate it
 BackgroundJob.Enqueue<ILibraryScanService>(service => service.ScanLibrary());
 #else
-// Apply any pending migrations and create the admin login on first start
+// Apply any pending migrations and create the admin login on first start.
+// The environmental settings are added to the database by hand
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
-    await DatabaseBootstrapHelper.BootstrapDatabase(dbContext);
+
+    if (!await dbContext.Users.AnyAsync())
+    {
+        var adminUsername = Environment.GetEnvironmentVariable("AdminUsername");
+        var adminPassword = Environment.GetEnvironmentVariable("AdminPassword");
+
+        if (string.IsNullOrWhiteSpace(adminUsername) || string.IsNullOrWhiteSpace(adminPassword))
+        {
+            throw new InvalidOperationException("No admin user exists. Set the AdminUsername and AdminPassword environment variables to create one");
+        }
+
+        // Usernames are matched lowercased and trimmed at login, so store them the same way
+        dbContext.Users.Add(new User
+        {
+            Username = adminUsername.ToLower().Trim(),
+            PasswordHash = new PasswordHasher<User>().HashPassword(new User(), adminPassword)
+        });
+
+        await dbContext.SaveChangesAsync();
+        Log.Information($"Created admin user {adminUsername}");
+    }
 }
 #endif
 
