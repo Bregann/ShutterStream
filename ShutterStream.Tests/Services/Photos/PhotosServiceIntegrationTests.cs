@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using ShutterStream.Domain.Enums;
-using ShutterStream.Domain.Results;
 using ShutterStream.Domain.Helpers;
+using ShutterStream.Domain.Results;
 using ShutterStream.Domain.Services.Photos;
 using ShutterStream.Tests.Infrastructure;
 using SkiaSharp;
