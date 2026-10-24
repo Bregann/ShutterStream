@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { doQueryGet } from '@/helpers/apiClient'
 import { QueryKeys } from '@/helpers/QueryKeys'
 import { formatAlbumDate } from '@/helpers/dateHelper'
+import { formatSubFolder, groupPhotosBySubFolder } from '@/helpers/photoHelper'
 import { useAuth } from '@/context/authContext'
 import type { GetAlbumDto } from '@/interfaces/api/albums/GetAlbumDto'
 import JustifiedPhotoGrid from '@/components/photos/JustifiedPhotoGrid'
@@ -93,7 +94,21 @@ export default function AlbumComponent({ albumId }: AlbumComponentProps) {
             <Text c="dimmed">There are no photos in this album yet.</Text>
           </Center>
         ) : (
-          <JustifiedPhotoGrid photos={album.photos} />
+          <Stack gap="xl">
+            {groupPhotosBySubFolder(album.photos).map((section, index) => (
+              <section key={section.subFolder}>
+                {section.subFolder !== '' && (
+                  <Group justify="space-between" align="baseline" mb="sm">
+                    <Title order={2} size="h3">{formatSubFolder(section.subFolder)}</Title>
+                    <Text c="dimmed" size="sm">
+                      {section.photos.length} {section.photos.length === 1 ? 'photo' : 'photos'}
+                    </Text>
+                  </Group>
+                )}
+                <JustifiedPhotoGrid photos={section.photos} eagerCount={index === 0 ? 12 : 0} />
+              </section>
+            ))}
+          </Stack>
         )}
       </Stack>
     </Container>

@@ -22,6 +22,7 @@ export interface AlbumCaptionStatus {
 
 export interface AdminPhotoItem {
   photoId: number
+  subFolder: string
   fileName: string
   width: number
   height: number

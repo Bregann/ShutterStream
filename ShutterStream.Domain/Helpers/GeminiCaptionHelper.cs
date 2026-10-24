@@ -3,6 +3,7 @@ using ShutterStream.Domain.DTOs.Captions;
 using ShutterStream.Domain.DTOs.Gemini;
 using ShutterStream.Domain.Enums;
 using ShutterStream.Domain.Interfaces.Helpers;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 
@@ -29,6 +30,28 @@ namespace ShutterStream.Domain.Helpers
             """;
 
         private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+        // Overloaded ("high demand") or rate limited. Both clear up on their own, so they're worth waiting out
+        private static readonly HttpStatusCode[] _retryableStatusCodes =
+        [
+            HttpStatusCode.TooManyRequests,
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.BadGateway,
+            HttpStatusCode.ServiceUnavailable,
+            HttpStatusCode.GatewayTimeout
+        ];
+
+        /// <summary>
+        /// How long to wait before each retry of a temporary failure. Once these run out the photo
+        /// is counted as failed, and running the caption job again picks it back up
+        /// </summary>
+        public TimeSpan[] RetryDelays { get; init; } =
+        [
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromSeconds(30),
+            TimeSpan.FromSeconds(60)
+        ];
 
         private string ApiKey => environmentalSettingHelper.GetEnvironmentalSettingValue(EnvironmentalSettingEnum.GeminiApiKey);
         private string Model => environmentalSettingHelper.GetEnvironmentalSettingValue(EnvironmentalSettingEnum.GeminiModel);
@@ -84,22 +107,46 @@ namespace ShutterStream.Domain.Helpers
                 }
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Post, $"{GeminiApiBaseUrl}/models/{Model}:generateContent")
+            var requestJson = JsonSerializer.Serialize(requestBody);
+
+            for (var attempt = 0; ; attempt++)
             {
-                Content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
-            };
+                // A request message can only be sent once, so each attempt needs a fresh one
+                using var request = new HttpRequestMessage(HttpMethod.Post, $"{GeminiApiBaseUrl}/models/{Model}:generateContent")
+                {
+                    Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
+                };
 
-            request.Headers.Add("x-goog-api-key", ApiKey);
+                request.Headers.Add("x-goog-api-key", ApiKey);
 
-            var response = await httpClient.SendAsync(request, cancellationToken);
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                using var response = await httpClient.SendAsync(request, cancellationToken);
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
-            {
+                if (response.IsSuccessStatusCode)
+                {
+                    return ParseResponse(content, context);
+                }
+
+                if (_retryableStatusCodes.Contains(response.StatusCode) && attempt < RetryDelays.Length)
+                {
+                    // Follow Gemini's Retry-After when it sends one. The jitter stops the parallel
+                    // requests in a caption job all retrying at the same moment and overloading it again
+                    var delay = response.Headers.RetryAfter?.Delta ?? RetryDelays[attempt] * (1 + Random.Shared.NextDouble() * 0.25);
+
+                    Log.Warning("Gemini is unavailable ({StatusCode}), retrying in {Delay:0}s (attempt {Attempt} of {MaxAttempts})",
+                        response.StatusCode, delay.TotalSeconds, attempt + 2, RetryDelays.Length + 1);
+
+                    await Task.Delay(delay, cancellationToken);
+                    continue;
+                }
+
                 Log.Error($"Gemini caption request failed: {response.StatusCode} - {content}");
                 throw new HttpRequestException($"Gemini caption request failed: {response.StatusCode}");
             }
+        }
 
+        private static PhotoCaption? ParseResponse(string content, PhotoCaptionContext context)
+        {
             var geminiResponse = JsonSerializer.Deserialize<GeminiGenerateContentResponse>(content, _jsonOptions);
 
             // Gemini blocks some images outright, or stops a reply early for safety reasons

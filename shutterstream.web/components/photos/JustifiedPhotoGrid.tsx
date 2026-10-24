@@ -8,9 +8,11 @@ import type { AlbumPhotoItem } from '@/interfaces/api/albums/GetAlbumDto'
 
 interface JustifiedPhotoGridProps {
   photos: AlbumPhotoItem[]
+  // How many photos at the start load straight away. Sections further down the page pass 0
+  eagerCount?: number
 }
 
-export default function JustifiedPhotoGrid({ photos }: JustifiedPhotoGridProps) {
+export default function JustifiedPhotoGrid({ photos, eagerCount = 12 }: JustifiedPhotoGridProps) {
   return (
     <div className={classes.grid}>
       {photos.map((photo, index) => {
@@ -33,7 +35,7 @@ export default function JustifiedPhotoGrid({ photos }: JustifiedPhotoGridProps) 
               alt={photo.title ?? ''}
               className={classes.image}
               // The first rows are usually on screen straight away, so don't lazy load them
-              loading={index < 12 ? 'eager' : 'lazy'}
+              loading={index < eagerCount ? 'eager' : 'lazy'}
               decoding="async"
             />
           </Link>

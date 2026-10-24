@@ -8,6 +8,38 @@ export const getPhotoImageUrl = (photoId: number, size: PhotoSize, version: numb
   return `/api/Photos/GetPhotoImage?photoId=${photoId}&size=${size}&v=${version}`
 }
 
+export interface PhotoSection<T> {
+  subFolder: string
+  photos: T[]
+}
+
+/**
+ * Splits an album's photos into a section per sub folder (e.g. one per day of a holiday).
+ * The API already returns them grouped and in order, so each run of the same folder is a section.
+ */
+export const groupPhotosBySubFolder = <T extends { subFolder: string }>(photos: T[]): PhotoSection<T>[] => {
+  const sections: PhotoSection<T>[] = []
+
+  for (const photo of photos) {
+    const current = sections.at(-1)
+
+    if (current !== undefined && current.subFolder === photo.subFolder) {
+      current.photos.push(photo)
+    } else {
+      sections.push({ subFolder: photo.subFolder, photos: [photo] })
+    }
+  }
+
+  return sections
+}
+
+/**
+ * Turns a nested sub folder path into a heading, e.g. "Day 2/Evening" into "Day 2 / Evening"
+ */
+export const formatSubFolder = (subFolder: string): string => {
+  return subFolder.split('/').join(' / ')
+}
+
 /**
  * Builds a readable camera name. Most makers repeat the brand in the model
  * (e.g. "NIKON CORPORATION" + "NIKON Z 6_2"), so the make is dropped when that happens.

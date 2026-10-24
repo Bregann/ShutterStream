@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ShutterStream.Domain.Enums;
+using ShutterStream.Domain.Extensions;
 using ShutterStream.Domain.Helpers;
 using ShutterStream.Domain.Services.Library;
 using ShutterStream.Tests.Infrastructure;
@@ -143,6 +144,66 @@ namespace ShutterStream.Tests.Services.Library
             // Assert
             Assert.That(await DbContext.Photos.CountAsync(), Is.EqualTo(1));
             Assert.That(await DbContext.Albums.CountAsync(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public async Task ScanLibrary_WithSubFolders_ShouldAddThemToTheSameAlbum()
+        {
+            // Arrange - the same file name in two day folders must not clash
+            await CreatePhoto("Japan", "Overview.jpg");
+            await CreatePhoto(Path.Combine("Japan", "Day 1"), "DSC_0001.jpg");
+            await CreatePhoto(Path.Combine("Japan", "Day 2"), "DSC_0001.jpg");
+            await CreatePhoto(Path.Combine("Japan", "Day 2", "Evening"), "DSC_0002.jpg");
+            await CreatePhoto(Path.Combine("Japan", ".edits"), "DSC_0003.jpg");
+
+            // Act
+            var result = await _scanService.ScanLibrary();
+
+            // Assert
+            Assert.That(result!.AlbumsAdded, Is.EqualTo(1));
+
+            var photos = await DbContext.Photos.AsNoTracking().OrderBy(p => p.SubFolder).ToListAsync();
+            Assert.That(photos.Select(p => p.SubFolder), Is.EqualTo(new[] { "", "Day 1", "Day 2", "Day 2/Evening" }));
+            Assert.That(photos.All(p => p.ThumbnailsGenerated), Is.True, "Thumbnails must be found from the sub folder path");
+        }
+
+        [Test]
+        public async Task ScanLibrary_WhenSubFolderPhotoDeleted_ShouldOnlyRemoveThatPhoto()
+        {
+            // Arrange
+            await CreatePhoto(Path.Combine("Japan", "Day 1"), "DSC_0001.jpg");
+            await CreatePhoto(Path.Combine("Japan", "Day 2"), "DSC_0001.jpg");
+            await _scanService.ScanLibrary();
+
+            File.Delete(Path.Combine(_fileSystem.LibraryPath, "Japan", "Day 2", "DSC_0001.jpg"));
+
+            // Act
+            var result = await _scanService.ScanLibrary();
+
+            // Assert
+            Assert.That(result!.PhotosRemoved, Is.EqualTo(1));
+            var remaining = await DbContext.Photos.AsNoTracking().SingleAsync();
+            Assert.That(remaining.SubFolder, Is.EqualTo("Day 1"));
+        }
+
+        [Test]
+        public async Task OrderForDisplay_ShouldPutLoosePhotosFirstThenSubFoldersByEarliestPhoto()
+        {
+            // Arrange - "Day 10" sorts before "Day 2" by name, but was taken later
+            await CreatePhoto("Japan", "Overview.jpg", exif: _sampleExif with { DateTaken = new DateTime(2025, 3, 20, 12, 0, 0) });
+            await CreatePhoto(Path.Combine("Japan", "Day 10"), "A.jpg", exif: _sampleExif with { DateTaken = new DateTime(2025, 3, 10, 9, 0, 0) });
+            await CreatePhoto(Path.Combine("Japan", "Day 2"), "B.jpg", exif: _sampleExif with { DateTaken = new DateTime(2025, 3, 2, 18, 0, 0) });
+            await CreatePhoto(Path.Combine("Japan", "Day 2"), "A.jpg", exif: _sampleExif with { DateTaken = new DateTime(2025, 3, 2, 9, 0, 0) });
+            await _scanService.ScanLibrary();
+
+            // Act
+            var ordered = await DbContext.Photos.AsNoTracking()
+                .OrderForDisplay()
+                .Select(p => p.SubFolder + "/" + p.FileName)
+                .ToListAsync();
+
+            // Assert
+            Assert.That(ordered, Is.EqualTo(new[] { "/Overview.jpg", "Day 2/A.jpg", "Day 2/B.jpg", "Day 10/A.jpg" }));
         }
 
         [Test]

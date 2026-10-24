@@ -17,5 +17,10 @@ namespace ShutterStream.Domain.DTOs.Albums
         public required int Height { get; set; }
         public required long Version { get; set; }
         public string? Title { get; set; }
+
+        /// <summary>
+        /// The section the photo is shown under, "" for photos directly in the album folder
+        /// </summary>
+        public required string SubFolder { get; set; }
     }
 }

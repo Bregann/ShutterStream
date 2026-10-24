@@ -34,6 +34,7 @@ namespace ShutterStream.Domain.DTOs.Admin.Responses
     public class AdminPhotoItem
     {
         public required int PhotoId { get; set; }
+        public required string SubFolder { get; set; }
         public required string FileName { get; set; }
         public required int Width { get; set; }
         public required int Height { get; set; }

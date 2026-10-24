@@ -13,4 +13,5 @@ export interface AlbumPhotoItem {
   height: number
   version: number
   title: string | null
+  subFolder: string
 }

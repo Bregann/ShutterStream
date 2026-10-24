@@ -1,13 +1,13 @@
 'use client'
 
-import { ActionIcon, AspectRatio, Badge, Card, Divider, Group, Image, SimpleGrid, Text, Title, Tooltip } from '@mantine/core'
+import { ActionIcon, AspectRatio, Badge, Card, Divider, Group, Image, SimpleGrid, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { IconCheck, IconEye, IconEyeOff, IconPencil, IconSparkles, IconStar, IconStarFilled, IconX } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import classes from '@/css/adminPhotoGrid.module.css'
 import { useMutationPatch } from '@/helpers/mutations/useMutationPatch'
 import notificationHelper from '@/helpers/notificationHelper'
-import { getPhotoImageUrl } from '@/helpers/photoHelper'
+import { formatSubFolder, getPhotoImageUrl, groupPhotosBySubFolder } from '@/helpers/photoHelper'
 import { QueryKeys } from '@/helpers/QueryKeys'
 import { PhotoSize } from '@/interfaces/api/photos/PhotoSize'
 import type { GetAdminAlbumDto } from '@/interfaces/api/admin/GetAdminAlbumDto'
@@ -71,86 +71,97 @@ export default function AdminPhotoGrid({ album }: AdminPhotoGridProps) {
           This folder has no photos yet.
         </Text>
       ) : (
-        <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 6 }} spacing="xs">
-          {album.photos.map(photo => {
-            const isCover = album.coverPhotoId === photo.photoId
+        <Stack gap="lg">
+          {groupPhotosBySubFolder(album.photos).map(section => (
+            <div key={section.subFolder}>
+              {section.subFolder !== '' && (
+                <Text fw={600} size="sm" mb="xs">
+                  {formatSubFolder(section.subFolder)} · {section.photos.length} {section.photos.length === 1 ? 'photo' : 'photos'}
+                </Text>
+              )}
+              <SimpleGrid cols={{ base: 2, sm: 3, md: 4, lg: 6 }} spacing="xs">
+                {section.photos.map(photo => {
+                  const isCover = album.coverPhotoId === photo.photoId
 
-            return (
-              <div key={photo.photoId} className={`${classes.tile} ${photo.isHidden ? classes.hidden : ''}`}>
-                <AspectRatio ratio={1}>
-                  <Image
-                    src={getPhotoImageUrl(photo.photoId, PhotoSize.Small, photo.version)}
-                    alt={photo.fileName}
-                    className={classes.image}
-                    fit="cover"
-                    loading="lazy"
-                  />
-                </AspectRatio>
+                  return (
+                    <div key={photo.photoId} className={`${classes.tile} ${photo.isHidden ? classes.hidden : ''}`}>
+                      <AspectRatio ratio={1}>
+                        <Image
+                          src={getPhotoImageUrl(photo.photoId, PhotoSize.Small, photo.version)}
+                          alt={photo.fileName}
+                          className={classes.image}
+                          fit="cover"
+                          loading="lazy"
+                        />
+                      </AspectRatio>
 
-                <Group gap={4} className={classes.badges}>
-                  {isCover && <Badge size="sm" color="yellow" leftSection={<IconStarFilled size="0.7rem" />}>Cover</Badge>}
-                  {photo.isHidden && <Badge size="sm" color="gray">Hidden</Badge>}
-                </Group>
+                      <Group gap={4} className={classes.badges}>
+                        {isCover && <Badge size="sm" color="yellow" leftSection={<IconStarFilled size="0.7rem" />}>Cover</Badge>}
+                        {photo.isHidden && <Badge size="sm" color="gray">Hidden</Badge>}
+                      </Group>
 
-                <Group gap={4} className={classes.actions}>
-                  <Tooltip label="Edit caption">
-                    <ActionIcon
-                      variant="filled"
-                      color="dark"
-                      size="md"
-                      onClick={() => setPhotoToEdit(photo)}
-                      aria-label="Edit caption"
-                    >
-                      <IconPencil size="1rem" />
-                    </ActionIcon>
-                  </Tooltip>
-                  <Tooltip label={isCover ? 'Album cover' : 'Set as cover'}>
-                    <ActionIcon
-                      variant="filled"
-                      color={isCover ? 'yellow' : 'dark'}
-                      size="md"
-                      onClick={() => setAlbumCover({ albumId: album.albumId, photoId: photo.photoId })}
-                      loading={isUpdatingCover && coverVariables?.photoId === photo.photoId}
-                      disabled={isCover || photo.isHidden}
-                      aria-label="Set as cover"
-                    >
-                      {isCover ? <IconStarFilled size="1rem" /> : <IconStar size="1rem" />}
-                    </ActionIcon>
-                  </Tooltip>
-                  <Tooltip label={photo.isHidden ? 'Show photo' : 'Hide photo'}>
-                    <ActionIcon
-                      variant="filled"
-                      color="dark"
-                      size="md"
-                      onClick={() => setPhotoVisibility({ photoId: photo.photoId, isHidden: !photo.isHidden })}
-                      loading={isUpdatingVisibility && visibilityVariables?.photoId === photo.photoId}
-                      aria-label={photo.isHidden ? 'Show photo' : 'Hide photo'}
-                    >
-                      {photo.isHidden ? <IconEye size="1rem" /> : <IconEyeOff size="1rem" />}
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
+                      <Group gap={4} className={classes.actions}>
+                        <Tooltip label="Edit caption">
+                          <ActionIcon
+                            variant="filled"
+                            color="dark"
+                            size="md"
+                            onClick={() => setPhotoToEdit(photo)}
+                            aria-label="Edit caption"
+                          >
+                            <IconPencil size="1rem" />
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label={isCover ? 'Album cover' : 'Set as cover'}>
+                          <ActionIcon
+                            variant="filled"
+                            color={isCover ? 'yellow' : 'dark'}
+                            size="md"
+                            onClick={() => setAlbumCover({ albumId: album.albumId, photoId: photo.photoId })}
+                            loading={isUpdatingCover && coverVariables?.photoId === photo.photoId}
+                            disabled={isCover || photo.isHidden}
+                            aria-label="Set as cover"
+                          >
+                            {isCover ? <IconStarFilled size="1rem" /> : <IconStar size="1rem" />}
+                          </ActionIcon>
+                        </Tooltip>
+                        <Tooltip label={photo.isHidden ? 'Show photo' : 'Hide photo'}>
+                          <ActionIcon
+                            variant="filled"
+                            color="dark"
+                            size="md"
+                            onClick={() => setPhotoVisibility({ photoId: photo.photoId, isHidden: !photo.isHidden })}
+                            loading={isUpdatingVisibility && visibilityVariables?.photoId === photo.photoId}
+                            aria-label={photo.isHidden ? 'Show photo' : 'Hide photo'}
+                          >
+                            {photo.isHidden ? <IconEye size="1rem" /> : <IconEyeOff size="1rem" />}
+                          </ActionIcon>
+                        </Tooltip>
+                      </Group>
 
-                <Group gap={4} wrap="nowrap" px={6} py={4}>
-                  {photo.isAiCaption && (
-                    <Tooltip label="Written by AI">
-                      <IconSparkles size="0.8rem" color="var(--mantine-color-violet-4)" style={{ flexShrink: 0 }} />
-                    </Tooltip>
-                  )}
-                  <Text size="xs" c={photo.title === null ? 'dimmed' : undefined} lineClamp={1} style={{ flex: 1 }}>
-                    {photo.title ?? 'No caption'}
-                  </Text>
-                  <Tooltip label={`${photo.viewCount.toLocaleString()} ${photo.viewCount === 1 ? 'view' : 'views'}`}>
-                    <Group gap={2} wrap="nowrap" style={{ flexShrink: 0 }}>
-                      <IconEye size="0.8rem" color="var(--mantine-color-dimmed)" />
-                      <Text size="xs" c="dimmed">{photo.viewCount.toLocaleString()}</Text>
-                    </Group>
-                  </Tooltip>
-                </Group>
-              </div>
-            )
-          })}
-        </SimpleGrid>
+                      <Group gap={4} wrap="nowrap" px={6} py={4}>
+                        {photo.isAiCaption && (
+                          <Tooltip label="Written by AI">
+                            <IconSparkles size="0.8rem" color="var(--mantine-color-violet-4)" style={{ flexShrink: 0 }} />
+                          </Tooltip>
+                        )}
+                        <Text size="xs" c={photo.title === null ? 'dimmed' : undefined} lineClamp={1} style={{ flex: 1 }}>
+                          {photo.title ?? 'No caption'}
+                        </Text>
+                        <Tooltip label={`${photo.viewCount.toLocaleString()} ${photo.viewCount === 1 ? 'view' : 'views'}`}>
+                          <Group gap={2} wrap="nowrap" style={{ flexShrink: 0 }}>
+                            <IconEye size="0.8rem" color="var(--mantine-color-dimmed)" />
+                            <Text size="xs" c="dimmed">{photo.viewCount.toLocaleString()}</Text>
+                          </Group>
+                        </Tooltip>
+                      </Group>
+                    </div>
+                  )
+                })}
+              </SimpleGrid>
+            </div>
+          ))}
+        </Stack>
       )}
 
       <EditPhotoCaptionModal

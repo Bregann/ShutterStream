@@ -60,7 +60,7 @@ namespace ShutterStream.Domain.Services.Photos
         {
             var photo = await context.Photos
                 .Where(p => p.Id == photoId)
-                .Select(p => new { p.Id, p.FileName, p.FileModifiedAt, p.IsHidden, p.Album.FolderName, AlbumIsPublic = p.Album.IsPublic })
+                .Select(p => new { p.Id, p.SubFolder, p.FileName, p.FileModifiedAt, p.IsHidden, p.Album.FolderName, AlbumIsPublic = p.Album.IsPublic })
                 .FirstOrDefaultAsync();
 
             if (photo == null)
@@ -81,7 +81,7 @@ namespace ShutterStream.Domain.Services.Photos
             // arrives first (e.g. straight after a scan finds new photos, or the cache was cleared)
             if (!File.Exists(thumbnailPath))
             {
-                var sourcePath = libraryHelper.GetPhotoFilePath(photo.FolderName, photo.FileName);
+                var sourcePath = libraryHelper.GetPhotoFilePath(photo.FolderName, photo.SubFolder, photo.FileName);
 
                 if (!File.Exists(sourcePath))
                 {

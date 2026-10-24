@@ -132,17 +132,22 @@ namespace ShutterStream.Domain.Services.Library
 
         private async Task SyncAlbumPhotos(Album album, LibraryScanResult result)
         {
-            var files = new DirectoryInfo(libraryHelper.GetAlbumFolderPath(album.FolderName))
-                .EnumerateFiles()
-                .Where(f => libraryHelper.IsSupportedImageFile(f.Name))
-                .ToDictionary(f => f.Name, StringComparer.Ordinal);
+            var albumFolderPath = libraryHelper.GetAlbumFolderPath(album.FolderName);
+
+            // Sub folders (e.g. one per day of a holiday) are part of the same album. Hidden folders
+            // are skipped the same way hidden files are
+            var files = new DirectoryInfo(albumFolderPath)
+                .EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true })
+                .Select(f => (File: f, SubFolder: GetSubFolder(albumFolderPath, f)))
+                .Where(f => libraryHelper.IsSupportedImageFile(f.File.Name) && !f.SubFolder.Split('/').Any(part => part.StartsWith('.')))
+                .ToDictionary(f => PhotoKey(f.SubFolder, f.File.Name), f => f.File, StringComparer.Ordinal);
 
             var existingPhotos = await context.Photos.Where(p => p.AlbumId == album.Id).ToListAsync();
             var currentPhotos = new List<Photo>();
 
             foreach (var photo in existingPhotos)
             {
-                if (!files.TryGetValue(photo.FileName, out var file))
+                if (!files.TryGetValue(PhotoKey(photo.SubFolder, photo.FileName), out var file))
                 {
                     if (album.CoverPhotoId == photo.Id)
                     {
@@ -181,9 +186,9 @@ namespace ShutterStream.Domain.Services.Library
                 result.PhotosUpdated++;
             }
 
-            var existingFileNames = existingPhotos.Select(p => p.FileName).ToHashSet(StringComparer.Ordinal);
+            var existingKeys = existingPhotos.Select(p => PhotoKey(p.SubFolder, p.FileName)).ToHashSet(StringComparer.Ordinal);
 
-            foreach (var file in files.Values.Where(f => !existingFileNames.Contains(f.Name)))
+            foreach (var file in files.Where(f => !existingKeys.Contains(f.Key)).Select(f => f.Value))
             {
                 var metadata = await TryReadMetadata(file.FullName, result);
 
@@ -195,6 +200,7 @@ namespace ShutterStream.Domain.Services.Library
                 var photo = new Photo
                 {
                     AlbumId = album.Id,
+                    SubFolder = GetSubFolder(albumFolderPath, file),
                     FileName = file.Name,
                     FileSizeBytes = file.Length,
                     FileModifiedAt = file.LastWriteTimeUtc,
@@ -214,6 +220,18 @@ namespace ShutterStream.Domain.Services.Library
 
             await context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// The file's folder relative to the album folder, always "/" separated so it is the same on
+        /// every OS. Empty for files directly in the album folder.
+        /// </summary>
+        private static string GetSubFolder(string albumFolderPath, FileInfo file)
+        {
+            var relative = Path.GetRelativePath(albumFolderPath, file.DirectoryName!);
+            return relative == "." ? "" : relative.Replace('\\', '/');
+        }
+
+        private static string PhotoKey(string subFolder, string fileName) => $"{subFolder}/{fileName}";
 
         private async Task<PhotoMetadata?> TryReadMetadata(string filePath, LibraryScanResult result)
         {
@@ -249,7 +267,7 @@ namespace ShutterStream.Domain.Services.Library
             var pendingPhotos = await context.Photos
                 .Where(p => !p.ThumbnailsGenerated)
                 .OrderBy(p => p.Id)
-                .Select(p => new { p.Id, p.FileName, p.Album.FolderName })
+                .Select(p => new { p.Id, p.SubFolder, p.FileName, p.Album.FolderName })
                 .ToListAsync();
 
             if (pendingPhotos.Count == 0)
@@ -277,7 +295,7 @@ namespace ShutterStream.Domain.Services.Library
                             .Select(size => new ThumbnailTarget(libraryHelper.GetThumbnailPath(photo.Id, size), libraryHelper.GetMaxDimension(size)))
                             .ToList();
 
-                        await imageProcessingHelper.GenerateThumbnails(libraryHelper.GetPhotoFilePath(photo.FolderName, photo.FileName), targets);
+                        await imageProcessingHelper.GenerateThumbnails(libraryHelper.GetPhotoFilePath(photo.FolderName, photo.SubFolder, photo.FileName), targets);
                         generatedIds.Add(photo.Id);
                     }
                     catch (Exception ex)

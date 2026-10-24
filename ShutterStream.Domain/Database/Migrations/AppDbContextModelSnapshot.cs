@@ -145,6 +145,10 @@ namespace ShutterStream.Domain.Database.Migrations
                     b.Property<string>("LensModel")
                         .HasColumnType("text");
 
+                    b.Property<string>("SubFolder")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<bool>("ThumbnailsGenerated")
                         .HasColumnType("boolean");
 
@@ -159,7 +163,7 @@ namespace ShutterStream.Domain.Database.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AlbumId", "FileName")
+                    b.HasIndex("AlbumId", "SubFolder", "FileName")
                         .IsUnique();
 
                     b.ToTable("Photos");

@@ -87,5 +87,36 @@ namespace ShutterStream.Tests.Infrastructure
 
             return new HttpClient(mockHttpMessageHandler.Object);
         }
+
+        /// <summary>
+        /// Creates a mock HttpClient that returns each response in turn, one per request, for testing retries.
+        /// The number of requests it was sent is available through the returned counter
+        /// </summary>
+        public static HttpClient CreateMockHttpClientSequence(out Func<int> requestCount, params (string Content, HttpStatusCode StatusCode)[] responses)
+        {
+            var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+            var sent = 0;
+
+            mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .Returns(() =>
+                {
+                    var response = responses[Math.Min(sent, responses.Length - 1)];
+                    sent++;
+
+                    return Task.FromResult(new HttpResponseMessage
+                    {
+                        StatusCode = response.StatusCode,
+                        Content = new StringContent(response.Content)
+                    });
+                });
+
+            requestCount = () => sent;
+            return new HttpClient(mockHttpMessageHandler.Object);
+        }
     }
 }

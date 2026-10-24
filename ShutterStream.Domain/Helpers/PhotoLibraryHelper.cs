@@ -11,10 +11,7 @@ namespace ShutterStream.Domain.Helpers
     public class PhotoLibraryHelper(string libraryRootPath, string cacheRootPath) : IPhotoLibraryHelper
     {
         // Formats SkiaSharp can decode. RAW, HEIC and TIFF files are skipped by the scanner
-        private static readonly HashSet<string> _supportedExtensions = new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"
-        };
+        private static readonly string[] _supportedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"];
 
         public string LibraryRootPath { get; } = libraryRootPath;
 
@@ -23,9 +20,9 @@ namespace ShutterStream.Domain.Helpers
             return Path.Combine(LibraryRootPath, folderName);
         }
 
-        public string GetPhotoFilePath(string folderName, string fileName)
+        public string GetPhotoFilePath(string folderName, string subFolder, string fileName)
         {
-            return Path.Combine(LibraryRootPath, folderName, fileName);
+            return Path.Combine(LibraryRootPath, folderName, subFolder, fileName);
         }
 
         public string GetThumbnailPath(int photoId, PhotoSize size)
@@ -45,7 +42,7 @@ namespace ShutterStream.Domain.Helpers
 
         public bool IsSupportedImageFile(string fileName)
         {
-            return !fileName.StartsWith('.') && _supportedExtensions.Contains(Path.GetExtension(fileName));
+            return !fileName.StartsWith('.') && _supportedExtensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase);
         }
 
         public void DeleteThumbnails(int photoId)

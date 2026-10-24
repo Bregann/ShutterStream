@@ -99,11 +99,71 @@ namespace ShutterStream.Tests.Helpers
         public async Task GenerateCaption_WhenApiErrors_ShouldThrow()
         {
             // Arrange
-            var httpClient = MockFactory.CreateMockHttpClient("{\"error\":{\"code\":429}}", HttpStatusCode.TooManyRequests);
+            var httpClient = MockFactory.CreateMockHttpClient("{\"error\":{\"code\":400}}", HttpStatusCode.BadRequest);
             var helper = new GeminiCaptionHelper(MockFactory.CreateEnvironmentalSettingHelper().Object, httpClient);
 
             // Act & Assert
             await Assert.ThrowsAsync<HttpRequestException>(async () => await helper.GenerateCaption([1, 2, 3], _context));
+        }
+
+        [Test]
+        public async Task GenerateCaption_WhenOverloaded_ShouldRetryUntilItSucceeds()
+        {
+            // Arrange
+            var overloaded = ("{\"error\":{\"code\":503,\"status\":\"UNAVAILABLE\"}}", HttpStatusCode.ServiceUnavailable);
+            var httpClient = MockFactory.CreateMockHttpClientSequence(
+                out var requestCount,
+                overloaded,
+                ("{\"error\":{\"code\":429}}", HttpStatusCode.TooManyRequests),
+                (SuccessResponse("{\"title\":\"Northern lights\",\"description\":\"Green aurora.\"}"), HttpStatusCode.OK));
+
+            var helper = new GeminiCaptionHelper(MockFactory.CreateEnvironmentalSettingHelper().Object, httpClient)
+            {
+                RetryDelays = [TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero]
+            };
+
+            // Act
+            var caption = await helper.GenerateCaption([1, 2, 3], _context);
+
+            // Assert
+            Assert.That(caption!.Title, Is.EqualTo("Northern lights"));
+            Assert.That(requestCount(), Is.EqualTo(3));
+        }
+
+        [Test]
+        public async Task GenerateCaption_WhenStillOverloadedAfterRetries_ShouldThrow()
+        {
+            // Arrange
+            var httpClient = MockFactory.CreateMockHttpClientSequence(
+                out var requestCount,
+                ("{\"error\":{\"code\":503}}", HttpStatusCode.ServiceUnavailable));
+
+            var helper = new GeminiCaptionHelper(MockFactory.CreateEnvironmentalSettingHelper().Object, httpClient)
+            {
+                RetryDelays = [TimeSpan.Zero, TimeSpan.Zero]
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<HttpRequestException>(async () => await helper.GenerateCaption([1, 2, 3], _context));
+            Assert.That(requestCount(), Is.EqualTo(3), "One attempt plus a retry for each delay");
+        }
+
+        [Test]
+        public async Task GenerateCaption_WhenRequestIsInvalid_ShouldNotRetry()
+        {
+            // Arrange
+            var httpClient = MockFactory.CreateMockHttpClientSequence(
+                out var requestCount,
+                ("{\"error\":{\"code\":400}}", HttpStatusCode.BadRequest));
+
+            var helper = new GeminiCaptionHelper(MockFactory.CreateEnvironmentalSettingHelper().Object, httpClient)
+            {
+                RetryDelays = [TimeSpan.Zero, TimeSpan.Zero]
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<HttpRequestException>(async () => await helper.GenerateCaption([1, 2, 3], _context));
+            Assert.That(requestCount(), Is.EqualTo(1));
         }
 
         [Test]

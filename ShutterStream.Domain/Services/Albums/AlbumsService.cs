@@ -71,7 +71,7 @@ namespace ShutterStream.Domain.Services.Albums
             var photos = await context.Photos
                 .Where(p => p.AlbumId == albumId && !p.IsHidden)
                 .OrderForDisplay()
-                .Select(p => new { p.Id, p.Width, p.Height, p.FileModifiedAt, p.Title })
+                .Select(p => new { p.Id, p.Width, p.Height, p.FileModifiedAt, p.Title, p.SubFolder })
                 .ToListAsync();
 
             return Result.Ok(new GetAlbumDto
@@ -87,7 +87,8 @@ namespace ShutterStream.Domain.Services.Albums
                     Width = p.Width,
                     Height = p.Height,
                     Version = p.FileModifiedAt.ToImageVersion(),
-                    Title = p.Title
+                    Title = p.Title,
+                    SubFolder = p.SubFolder
                 }).ToArray()
             });
         }

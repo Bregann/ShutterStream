@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ShutterStream.Domain.Database.Models
 {
-    [Index(nameof(AlbumId), nameof(FileName), IsUnique = true)]
+    [Index(nameof(AlbumId), nameof(SubFolder), nameof(FileName), IsUnique = true)]
     public class Photo
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -16,6 +16,14 @@ namespace ShutterStream.Domain.Database.Models
         [ForeignKey(nameof(AlbumId))]
         [DeleteBehavior(DeleteBehavior.Cascade)]
         public virtual Album Album { get; set; } = null!;
+
+        /// <summary>
+        /// Path of the folder the photo is in, relative to the album folder and separated by "/",
+        /// e.g. "Day 1" for a holiday split by day. Empty when the photo sits directly in the album folder.
+        /// The album page shows a section per sub folder.
+        /// </summary>
+        [Required]
+        public string SubFolder { get; set; } = "";
 
         [Required]
         public required string FileName { get; set; }

@@ -116,7 +116,7 @@ namespace ShutterStream.Domain.Services.Admin
             var photos = await context.Photos
                 .Where(p => p.AlbumId == albumId)
                 .OrderForDisplay()
-                .Select(p => new { p.Id, p.FileName, p.Width, p.Height, p.FileModifiedAt, p.IsHidden, p.ViewCount, p.Title, p.Description, p.CaptionGeneratedAt })
+                .Select(p => new { p.Id, p.SubFolder, p.FileName, p.Width, p.Height, p.FileModifiedAt, p.IsHidden, p.ViewCount, p.Title, p.Description, p.CaptionGeneratedAt })
                 .ToListAsync();
 
             return Result.Ok(new GetAdminAlbumDto
@@ -130,6 +130,7 @@ namespace ShutterStream.Domain.Services.Admin
                 Photos = photos.Select(p => new AdminPhotoItem
                 {
                     PhotoId = p.Id,
+                    SubFolder = p.SubFolder,
                     FileName = p.FileName,
                     Width = p.Width,
                     Height = p.Height,

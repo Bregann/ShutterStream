@@ -24,7 +24,7 @@ namespace ShutterStream.Domain.Services.Captions
         // Kept low to stay well inside the API rate limits
         private const int MaxParallelRequests = 4;
 
-        private record PendingPhoto(int Id, string FileName, DateTime? DateTaken);
+        private record PendingPhoto(int Id, string SubFolder, string FileName, DateTime? DateTaken);
 
         public async Task GenerateAlbumCaptions(int albumId, bool regenerateExisting)
         {
@@ -46,7 +46,7 @@ namespace ShutterStream.Domain.Services.Captions
                 var pendingPhotos = await context.Photos
                     .Where(p => p.AlbumId == albumId && (p.Title == null || (regenerateExisting && p.CaptionGeneratedAt != null)))
                     .OrderForDisplay()
-                    .Select(p => new PendingPhoto(p.Id, p.FileName, p.DateTaken))
+                    .Select(p => new PendingPhoto(p.Id, p.SubFolder, p.FileName, p.DateTaken))
                     .ToListAsync();
 
                 captionJobStatusHelper.SetProgress(0, 0, pendingPhotos.Count);
@@ -114,7 +114,7 @@ namespace ShutterStream.Domain.Services.Captions
             if (!File.Exists(thumbnailPath))
             {
                 await imageProcessingHelper.GenerateThumbnails(
-                    libraryHelper.GetPhotoFilePath(folderName, photo.FileName),
+                    libraryHelper.GetPhotoFilePath(folderName, photo.SubFolder, photo.FileName),
                     [new ThumbnailTarget(thumbnailPath, libraryHelper.GetMaxDimension(PhotoSize.Small))]);
             }
 
