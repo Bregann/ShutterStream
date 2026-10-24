@@ -197,11 +197,12 @@ using (var scope = app.Services.CreateScope())
 // The debug database is recreated on every start, so scan straight away to populate it
 BackgroundJob.Enqueue<ILibraryScanService>(service => service.ScanLibrary());
 #else
-// Apply any pending migrations. The admin login and environmental settings are created by hand
+// Apply any pending migrations and create the admin login on first start
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.MigrateAsync();
+    await DatabaseBootstrapHelper.BootstrapDatabase(dbContext);
 }
 #endif
 
