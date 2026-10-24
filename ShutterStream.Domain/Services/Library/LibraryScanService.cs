@@ -291,7 +291,7 @@ namespace ShutterStream.Domain.Services.Library
                 {
                     try
                     {
-                        var targets = Enum.GetValues<PhotoSize>()
+                        var targets = PhotoSizes.Pregenerated
                             .Select(size => new ThumbnailTarget(libraryHelper.GetThumbnailPath(photo.Id, size), libraryHelper.GetMaxDimension(size)))
                             .ToList();
 

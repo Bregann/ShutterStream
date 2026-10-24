@@ -104,11 +104,14 @@ namespace ShutterStream.Tests.Services.Library
             Assert.That(photo.ThumbnailsGenerated, Is.True);
             Assert.That(result!.ThumbnailsGenerated, Is.EqualTo(1));
 
-            foreach (var size in Enum.GetValues<PhotoSize>())
+            foreach (var size in PhotoSizes.Pregenerated)
             {
                 using var codec = SKCodec.Create(_libraryHelper.GetThumbnailPath(photo.Id, size));
                 Assert.That(Math.Max(codec.Info.Width, codec.Info.Height), Is.EqualTo(_libraryHelper.GetMaxDimension(size)));
             }
+
+            // Full size takes too much disk to make for every photo, it's only generated when opened
+            Assert.That(File.Exists(_libraryHelper.GetThumbnailPath(photo.Id, PhotoSize.Full)), Is.False);
         }
 
         [Test]

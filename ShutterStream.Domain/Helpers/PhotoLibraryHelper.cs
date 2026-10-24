@@ -36,6 +36,7 @@ namespace ShutterStream.Domain.Helpers
             {
                 PhotoSize.Small => 1024,
                 PhotoSize.Large => 2048,
+                PhotoSize.Full => int.MaxValue,
                 _ => throw new ArgumentOutOfRangeException(nameof(size), size, "Unknown photo size")
             };
         }

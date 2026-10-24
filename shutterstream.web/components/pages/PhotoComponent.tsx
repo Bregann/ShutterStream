@@ -1,18 +1,19 @@
 'use client'
 
 import { ActionIcon, Button, Center, Container, Grid, Group, Loader, Stack, Text, Title } from '@mantine/core'
-import { IconArrowLeft, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
+import { IconArrowLeft, IconChevronLeft, IconChevronRight, IconDownload } from '@tabler/icons-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import classes from '@/css/photoViewer.module.css'
 import { doPost, doQueryGet } from '@/helpers/apiClient'
 import { QueryKeys } from '@/helpers/QueryKeys'
-import { getPhotoImageUrl } from '@/helpers/photoHelper'
+import { getPhotoDownloadUrl, getPhotoImageUrl } from '@/helpers/photoHelper'
 import { PhotoSize } from '@/interfaces/api/photos/PhotoSize'
 import type { GetPhotoDto } from '@/interfaces/api/photos/GetPhotoDto'
 import PhotoDetailsCard from '@/components/photos/PhotoDetailsCard'
+import FullScreenPhotoViewer from '@/components/photos/FullScreenPhotoViewer'
 
 interface PhotoComponentProps {
   photoId: number
@@ -23,6 +24,7 @@ const getPhoto = async (photoId: number) => await doQueryGet<GetPhotoDto>(`/api/
 export default function PhotoComponent({ photoId }: PhotoComponentProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const [viewerOpen, setViewerOpen] = useState(false)
 
   const { data: photo, isLoading, isError } = useQuery({
     queryKey: [QueryKeys.Photo, photoId.toString()],
@@ -75,9 +77,9 @@ export default function PhotoComponent({ photoId }: PhotoComponentProps) {
     }
   }, [photo, queryClient])
 
-  // Arrow keys step through the album, escape goes back to it
+  // Arrow keys step through the album, escape goes back to it. The full screen viewer handles its own keys
   useEffect(() => {
-    if (photo === undefined) {
+    if (photo === undefined || viewerOpen) {
       return
     }
 
@@ -97,7 +99,7 @@ export default function PhotoComponent({ photoId }: PhotoComponentProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [photo, router])
+  }, [photo, router, viewerOpen])
 
   if (isLoading) {
     return (
@@ -129,9 +131,20 @@ export default function PhotoComponent({ photoId }: PhotoComponentProps) {
           >
             {photo.albumTitle}
           </Button>
-          <Text size="sm" c="dimmed">
-            {photo.positionInAlbum} of {photo.albumPhotoCount}
-          </Text>
+          <Group gap="md">
+            <Text size="sm" c="dimmed">
+              {photo.positionInAlbum} of {photo.albumPhotoCount}
+            </Text>
+            <Button
+              component="a"
+              href={getPhotoDownloadUrl(photo.photoId, photo.version)}
+              variant="light"
+              size="compact-sm"
+              leftSection={<IconDownload size="1rem" />}
+            >
+              Download
+            </Button>
+          </Group>
         </Group>
 
         <Grid gap="md">
@@ -145,6 +158,7 @@ export default function PhotoComponent({ photoId }: PhotoComponentProps) {
                 height={photo.height}
                 alt={photo.title ?? `Photo ${photo.positionInAlbum} from ${photo.albumTitle}`}
                 className={classes.image}
+                onClick={() => setViewerOpen(true)}
               />
 
               {photo.previousPhotoId !== null && (
@@ -190,6 +204,9 @@ export default function PhotoComponent({ photoId }: PhotoComponentProps) {
           </Grid.Col>
         </Grid>
       </Stack>
+
+      {/* Keyed so the viewer starts fresh, unzoomed and loading, for each photo */}
+      <FullScreenPhotoViewer key={photo.photoId} photo={photo} opened={viewerOpen} onClose={() => setViewerOpen(false)} />
     </Container>
   )
 }

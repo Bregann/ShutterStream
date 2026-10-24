@@ -8,6 +8,13 @@ export const getPhotoImageUrl = (photoId: number, size: PhotoSize, version: numb
   return `/api/Photos/GetPhotoImage?photoId=${photoId}&size=${size}&v=${version}`
 }
 
+/**
+ * Builds the url that saves the full resolution photo as a file rather than opening it
+ */
+export const getPhotoDownloadUrl = (photoId: number, version: number): string => {
+  return `${getPhotoImageUrl(photoId, PhotoSize.Full, version)}&download=true`
+}
+
 export interface PhotoSection<T> {
   subFolder: string
   photos: T[]

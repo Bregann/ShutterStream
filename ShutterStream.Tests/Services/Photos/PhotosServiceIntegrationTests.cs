@@ -147,6 +147,31 @@ namespace ShutterStream.Tests.Services.Photos
         }
 
         [Test]
+        public async Task GetPhotoImage_Full_ShouldBeOriginalResolutionWithoutMetadata()
+        {
+            // Arrange
+            var sourcePath = Path.Combine(_fileSystem.LibraryPath, "Public Album", "IMG_0001.jpg");
+            await SampleImageHelper.CreateSampleJpeg(sourcePath, 3000, 2000, SKColors.Red, SKColors.Blue,
+                new SampleExif("NIKON CORPORATION", "NIKON Z 6_2", "NIKKOR Z 24-70mm f/4 S", 50, 4, 500, 400, new DateTime(2025, 3, 14, 15, 9, 26)));
+
+            // Act
+            var result = (await _photosService.GetPhotoImage(_publicPhotoIds[0], PhotoSize.Full, false)).Value;
+
+            // Assert
+            using (var codec = SKCodec.Create(result.FilePath))
+            {
+                Assert.That(codec.Info.Width, Is.EqualTo(3000));
+            }
+
+            var metadata = MetadataExtractor.ImageMetadataReader.ReadMetadata(result.FilePath);
+            Assert.That(metadata.OfType<MetadataExtractor.Formats.Exif.ExifIfd0Directory>(), Is.Empty, "The camera's EXIF must never reach a download");
+            Assert.That(result.DownloadFileName, Is.EqualTo("IMG_0001.jpg"));
+
+            // Full size is made on demand only, so it must not make the other sizes count as generated
+            Assert.That(File.Exists(_libraryHelper.GetThumbnailPath(_publicPhotoIds[0], PhotoSize.Small)), Is.False);
+        }
+
+        [Test]
         public async Task RecordPhotoView_ShouldIncrementViewCount()
         {
             // Act

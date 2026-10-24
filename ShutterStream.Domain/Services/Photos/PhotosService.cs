@@ -89,22 +89,32 @@ namespace ShutterStream.Domain.Services.Photos
                     return Result.NotFoundFail<PhotoImageResult>("Photo file not found");
                 }
 
-                var targets = Enum.GetValues<PhotoSize>()
-                    .Select(s => new ThumbnailTarget(libraryHelper.GetThumbnailPath(photo.Id, s), libraryHelper.GetMaxDimension(s)))
-                    .ToList();
+                if (size == PhotoSize.Full)
+                {
+                    // Full size is only ever made on demand, and isn't part of ThumbnailsGenerated
+                    await imageProcessingHelper.GenerateThumbnails(sourcePath, [new ThumbnailTarget(thumbnailPath, libraryHelper.GetMaxDimension(size))]);
+                }
+                else
+                {
+                    var targets = PhotoSizes.Pregenerated
+                        .Select(s => new ThumbnailTarget(libraryHelper.GetThumbnailPath(photo.Id, s), libraryHelper.GetMaxDimension(s)))
+                        .ToList();
 
-                await imageProcessingHelper.GenerateThumbnails(sourcePath, targets);
+                    await imageProcessingHelper.GenerateThumbnails(sourcePath, targets);
 
-                await context.Photos
-                    .Where(p => p.Id == photo.Id)
-                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.ThumbnailsGenerated, true));
+                    await context.Photos
+                        .Where(p => p.Id == photo.Id)
+                        .ExecuteUpdateAsync(s => s.SetProperty(p => p.ThumbnailsGenerated, true));
+                }
             }
 
             return Result.Ok(new PhotoImageResult
             {
                 FilePath = thumbnailPath,
                 LastModified = photo.FileModifiedAt,
-                IsPubliclyVisible = isPubliclyVisible
+                IsPubliclyVisible = isPubliclyVisible,
+                // Every size is re-encoded as a JPEG, whatever the original format was
+                DownloadFileName = $"{Path.GetFileNameWithoutExtension(photo.FileName)}.jpg"
             });
         }
 

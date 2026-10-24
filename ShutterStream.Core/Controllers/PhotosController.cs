@@ -20,7 +20,7 @@ namespace ShutterStream.Core.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult> GetPhotoImage([FromQuery] int photoId, [FromQuery] PhotoSize size)
+        public async Task<ActionResult> GetPhotoImage([FromQuery] int photoId, [FromQuery] PhotoSize size, [FromQuery] bool download = false)
         {
             if (!Enum.IsDefined(size))
             {
@@ -45,7 +45,8 @@ namespace ShutterStream.Core.Controllers
             var lastModified = new DateTimeOffset(DateTime.SpecifyKind(image.LastModified, DateTimeKind.Utc));
             var entityTag = new EntityTagHeaderValue($"\"{photoId}-{(int)size}-{lastModified.ToUnixTimeSeconds()}\"");
 
-            return PhysicalFile(image.FilePath, "image/jpeg", lastModified, entityTag);
+            // Giving a file name sends Content-Disposition: attachment, so the browser saves it instead of showing it
+            return PhysicalFile(image.FilePath, "image/jpeg", download ? image.DownloadFileName : null, lastModified, entityTag);
         }
 
         [HttpPost]

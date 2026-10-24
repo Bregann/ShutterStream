@@ -9,5 +9,10 @@ namespace ShutterStream.Domain.DTOs.Photos
         /// Whether anonymous visitors can see this photo. Used to decide how aggressively it can be cached.
         /// </summary>
         public required bool IsPubliclyVisible { get; set; }
+
+        /// <summary>
+        /// The name to save the file as when it is downloaded
+        /// </summary>
+        public required string DownloadFileName { get; set; }
     }
 }
