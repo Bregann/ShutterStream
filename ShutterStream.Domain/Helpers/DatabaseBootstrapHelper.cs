@@ -20,8 +20,8 @@ namespace ShutterStream.Domain.Helpers
 
         public static async Task BootstrapDatabase(AppDbContext context)
         {
-            var adminUsername = Environment.GetEnvironmentVariable("AdminUsername");
-            var adminPassword = Environment.GetEnvironmentVariable("AdminPassword");
+            var adminUsername = GetEnvironmentVariable("AdminUsername");
+            var adminPassword = GetEnvironmentVariable("AdminPassword");
 
             if (!await context.Users.AnyAsync())
             {
@@ -40,14 +40,24 @@ namespace ShutterStream.Domain.Helpers
             }
 
             // The Hangfire dashboard login defaults to the admin login unless set separately
-            await EnsureSetting(context, EnvironmentalSettingEnum.HangfireUsername, Environment.GetEnvironmentVariable("HangfireUsername") ?? adminUsername);
-            await EnsureSetting(context, EnvironmentalSettingEnum.HangfirePassword, Environment.GetEnvironmentVariable("HangfirePassword") ?? adminPassword);
+            await EnsureSetting(context, EnvironmentalSettingEnum.HangfireUsername, GetEnvironmentVariable("HangfireUsername") ?? adminUsername);
+            await EnsureSetting(context, EnvironmentalSettingEnum.HangfirePassword, GetEnvironmentVariable("HangfirePassword") ?? adminPassword);
 
             // AI captions are optional, an empty key just switches them off
-            await EnsureSetting(context, EnvironmentalSettingEnum.GeminiApiKey, Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "", allowEmpty: true);
-            await EnsureSetting(context, EnvironmentalSettingEnum.GeminiModel, Environment.GetEnvironmentVariable("GeminiModel") ?? DefaultGeminiModel);
+            await EnsureSetting(context, EnvironmentalSettingEnum.GeminiApiKey, GetEnvironmentVariable("GEMINI_API_KEY") ?? "", allowEmpty: true);
+            await EnsureSetting(context, EnvironmentalSettingEnum.GeminiModel, GetEnvironmentVariable("GeminiModel") ?? DefaultGeminiModel);
 
             await context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Treats a blank variable as unset. Container UIs like Unraid pass optional fields left
+        /// empty as empty variables, which would otherwise skip the fallbacks above.
+        /// </summary>
+        private static string? GetEnvironmentVariable(string name)
+        {
+            var value = Environment.GetEnvironmentVariable(name);
+            return string.IsNullOrWhiteSpace(value) ? null : value;
         }
 
         private static async Task EnsureSetting(AppDbContext context, EnvironmentalSettingEnum key, string? value, bool allowEmpty = false)
