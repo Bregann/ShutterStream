@@ -10,9 +10,10 @@ interface JustifiedPhotoGridProps {
   photos: AlbumPhotoItem[]
   // How many photos at the start load straight away. Sections further down the page pass 0
   eagerCount?: number
+  showTitles?: boolean
 }
 
-export default function JustifiedPhotoGrid({ photos, eagerCount = 12 }: JustifiedPhotoGridProps) {
+export default function JustifiedPhotoGrid({ photos, eagerCount = 12, showTitles = false }: JustifiedPhotoGridProps) {
   return (
     <div className={classes.grid}>
       {photos.map((photo, index) => {
@@ -38,6 +39,9 @@ export default function JustifiedPhotoGrid({ photos, eagerCount = 12 }: Justifie
               loading={index < eagerCount ? 'eager' : 'lazy'}
               decoding="async"
             />
+            {showTitles && photo.title !== null && (
+              <span className={classes.caption}>{photo.title}</span>
+            )}
           </Link>
         )
       })}

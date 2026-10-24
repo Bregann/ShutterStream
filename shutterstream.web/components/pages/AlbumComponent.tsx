@@ -1,8 +1,10 @@
 'use client'
 
-import { Alert, Button, Center, Container, Group, Loader, Stack, Text, Title } from '@mantine/core'
-import { IconArrowLeft, IconEyeOff, IconSettings } from '@tabler/icons-react'
+import { Alert, Button, Center, Collapse, Container, Group, Loader, Stack, Switch, Text, Title, UnstyledButton } from '@mantine/core'
+import { useLocalStorage } from '@mantine/hooks'
+import { IconArrowLeft, IconChevronDown, IconEyeOff, IconSettings } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import Link from 'next/link'
 import { doQueryGet } from '@/helpers/apiClient'
 import { QueryKeys } from '@/helpers/QueryKeys'
@@ -23,6 +25,23 @@ export default function AlbumComponent({ albumId }: AlbumComponentProps) {
     queryKey: [QueryKeys.Album, albumId.toString()],
     queryFn: async () => await doQueryGet<GetAlbumDto>(`/api/Albums/GetAlbum?albumId=${albumId}`)
   })
+
+  // Remembered per browser across every album, so a visitor who turns titles off keeps them off
+  const [showTitles, setShowTitles] = useLocalStorage({ key: 'showPhotoTitles', defaultValue: true })
+  const hasTitles = album?.photos.some(p => p.title !== null) ?? false
+
+  // Every section starts open, this tracks the ones that have been closed
+  const [collapsedSections, setCollapsedSections] = useState<string[]>([])
+
+  const sections = groupPhotosBySubFolder(album?.photos ?? [])
+  const subFolders = sections.map(s => s.subFolder).filter(s => s !== '')
+  const allCollapsed = subFolders.every(s => collapsedSections.includes(s))
+
+  const toggleSection = (subFolder: string) => {
+    setCollapsedSections(current => current.includes(subFolder)
+      ? current.filter(s => s !== subFolder)
+      : [...current, subFolder])
+  }
 
   if (isLoading) {
     return (
@@ -65,16 +84,25 @@ export default function AlbumComponent({ albumId }: AlbumComponentProps) {
             </Text>
           </div>
 
-          {auth.isAuthenticated && (
-            <Button
-              component={Link}
-              href={`/admin/albums/${album.albumId}`}
-              variant="light"
-              leftSection={<IconSettings size="1rem" />}
-            >
-              Manage album
-            </Button>
-          )}
+          <Group gap="md">
+            {hasTitles && (
+              <Switch
+                label="Show titles"
+                checked={showTitles}
+                onChange={(event) => setShowTitles(event.currentTarget.checked)}
+              />
+            )}
+            {auth.isAuthenticated && (
+              <Button
+                component={Link}
+                href={`/admin/albums/${album.albumId}`}
+                variant="light"
+                leftSection={<IconSettings size="1rem" />}
+              >
+                Manage album
+              </Button>
+            )}
+          </Group>
         </Group>
 
         {!album.isPublic && (
@@ -95,19 +123,52 @@ export default function AlbumComponent({ albumId }: AlbumComponentProps) {
           </Center>
         ) : (
           <Stack gap="xl">
-            {groupPhotosBySubFolder(album.photos).map((section, index) => (
-              <section key={section.subFolder}>
-                {section.subFolder !== '' && (
-                  <Group justify="space-between" align="baseline" mb="sm">
-                    <Title order={2} size="h3">{formatSubFolder(section.subFolder)}</Title>
-                    <Text c="dimmed" size="sm">
-                      {section.photos.length} {section.photos.length === 1 ? 'photo' : 'photos'}
-                    </Text>
-                  </Group>
-                )}
-                <JustifiedPhotoGrid photos={section.photos} eagerCount={index === 0 ? 12 : 0} />
-              </section>
-            ))}
+            {subFolders.length > 1 && (
+              <Group justify="flex-end" mb={-16}>
+                <Button
+                  variant="subtle"
+                  color="gray"
+                  size="compact-sm"
+                  onClick={() => setCollapsedSections(allCollapsed ? [] : subFolders)}
+                >
+                  {allCollapsed ? 'Expand all' : 'Collapse all'}
+                </Button>
+              </Group>
+            )}
+
+            {sections.map((section, index) => {
+              const isExpanded = !collapsedSections.includes(section.subFolder)
+
+              return (
+                <section key={section.subFolder}>
+                  {section.subFolder !== '' && (
+                    <UnstyledButton
+                      onClick={() => toggleSection(section.subFolder)}
+                      aria-expanded={isExpanded}
+                      w="100%"
+                      mb="sm"
+                    >
+                      <Group justify="space-between" align="center" wrap="nowrap">
+                        <Group gap="xs" wrap="nowrap">
+                          <IconChevronDown
+                            size="1.25rem"
+                            style={{ flexShrink: 0, transition: 'transform 200ms ease', transform: isExpanded ? undefined : 'rotate(-90deg)' }}
+                          />
+                          <Title order={2} size="h3">{formatSubFolder(section.subFolder)}</Title>
+                        </Group>
+                        <Text c="dimmed" size="sm" style={{ flexShrink: 0 }}>
+                          {section.photos.length} {section.photos.length === 1 ? 'photo' : 'photos'}
+                        </Text>
+                      </Group>
+                    </UnstyledButton>
+                  )}
+                  {/* Collapsed sections stay mounted but hidden, so their photos don't load until opened */}
+                  <Collapse expanded={isExpanded}>
+                    <JustifiedPhotoGrid photos={section.photos} eagerCount={index === 0 ? 12 : 0} showTitles={showTitles} />
+                  </Collapse>
+                </section>
+              )
+            })}
           </Stack>
         )}
       </Stack>

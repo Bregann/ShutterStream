@@ -49,3 +49,18 @@
 .item:hover .image {
   filter: brightness(1.1);
 }
+
+/* Title laid over the bottom of the photo, so showing titles never changes the row heights */
+.caption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 24px 8px 6px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  color: var(--mantine-color-white);
+  font-size: var(--mantine-font-size-xs);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
