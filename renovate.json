@@ -1,0 +1,74 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
+  "timezone": "Europe/London",
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "minimumReleaseAge": "3 days",
+  "labels": [
+    "dependencies"
+  ],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": [
+      "security"
+    ],
+    "schedule": [
+      "at any time"
+    ],
+    "minimumReleaseAge": null,
+    "automerge": true
+  },
+  "packageRules": [
+    {
+      "description": "Bundle every minor and patch update into one weekly PR, auto-merged when CI passes",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch",
+      "automerge": true
+    },
+    {
+      "description": "Major updates get their own PR and always wait for review",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    },
+    {
+      "description": ".NET major versions (SDK images, Microsoft.* packages) need manual review",
+      "matchPackageNames": [
+        "mcr.microsoft.com/dotnet/**",
+        "Microsoft.**",
+        "System.**",
+        "Npgsql.**"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": ".NET major upgrade",
+      "automerge": false
+    },
+    {
+      "description": "Next.js minor releases can change behaviour, so review them",
+      "matchPackageNames": [
+        "next",
+        "eslint-config-next",
+        "@next/**"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "groupName": "Next.js",
+      "automerge": false
+    }
+  ]
+}
