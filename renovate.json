@@ -70,5 +70,16 @@
       "groupName": "Next.js",
       "automerge": false
     }
-  ]
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 6am on monday"
+    ],
+    "automerge": true,
+    "commitMessageAction": "Refresh",
+    "prBodyNotes": [
+      "Regenerates package-lock.json so dependencies-of-dependencies (where most npm vulnerabilities hide) get updated. If CI fails or the app misbehaves, just close this PR; next week's refresh will try again."
+    ]
+  }
 }
