@@ -69,6 +69,19 @@
       ],
       "groupName": "Next.js",
       "automerge": false
+    },
+    {
+      "description": "Never offer .NET major versions for the Docker base images: they must change together with TargetFramework in the .csproj files, as a planned upgrade",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "mcr.microsoft.com/dotnet/**"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     }
   ],
   "lockFileMaintenance": {
