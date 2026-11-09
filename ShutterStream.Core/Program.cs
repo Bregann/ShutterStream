@@ -66,6 +66,7 @@ builder.Services.AddSingleton<IImageProcessingHelper, ImageProcessingHelper>();
 builder.Services.AddSingleton<ILibraryScanStatusHelper, LibraryScanStatusHelper>();
 builder.Services.AddSingleton<ICaptionJobStatusHelper, CaptionJobStatusHelper>();
 builder.Services.AddHttpClient<IAiCaptionHelper, GeminiCaptionHelper>();
+builder.Services.AddHttpClient<IProjectMonitorClient, ProjectMonitorClient>(c => c.Timeout = TimeSpan.FromSeconds(10));
 
 // Add in the auth
 builder.Services.AddAuthorization();
