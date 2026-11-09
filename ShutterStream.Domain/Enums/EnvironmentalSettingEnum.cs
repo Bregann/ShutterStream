@@ -5,6 +5,9 @@ namespace ShutterStream.Domain.Enums
         HangfireUsername,
         HangfirePassword,
         GeminiApiKey,
-        GeminiModel
+        GeminiModel,
+
+        // Key for reporting to Project Monitor (copy it from its Manage projects page)
+        ProjectMonitorApiKey
     }
 }
