@@ -6,7 +6,7 @@
   ],
   "timezone": "Europe/London",
   "schedule": [
-    "before 6am on monday"
+    "on monday"
   ],
   "minimumReleaseAge": "3 days",
   "labels": [
@@ -94,7 +94,7 @@
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": [
-      "before 6am on monday"
+      "on monday"
     ],
     "automerge": true,
     "commitMessageAction": "Refresh package-lock.json",
